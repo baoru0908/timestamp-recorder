@@ -11,7 +11,9 @@
 | 纯 bug 修复、ROM 适配加固、文案调整 | 小版本 **x.y.z** | 3.2.0 → 3.2.1 |
 | UI / 架构级别的整体重构 | 大版本 **x.0.0** | 3.x → 4.0.0 |
 
-- 每个版本发一个 GitHub Release，说明用**中文**（`docs/release-notes/vX.Y.Z.md`，`gh_release.py` 优先读取）。
+- 每个版本发一个 GitHub Release，说明用**中文**（`docs/release-notes/vX.Y.Z.md`，`release.ps1` / `gh_release.py` 优先读取）。
+- **打 tag + 建 GitHub Release 是发版的必做步骤**，由 `tools/release.ps1` **默认完成**（依赖 `gh` 已认证）；
+  只出包不发版时才加 `-SkipRelease`。历史教训：v4.1.1 / v4.1.2 曾因脚本开关默认跳过发布，代码推了却没有 tag / Release。
 - **已发布的 Release / tag 永不改动**；需要重出必须升版本号，走全新 Release。
 - ⚠️ **发版前自查**：问一句「这版有没有新功能 / 新交互 / 新依赖？」——有就必须 x.y.0。
   历史教训：v3.1.8（Tab 图标）、v3.1.11（ViewPager2 + 新依赖）都是功能版却按 patch 发了，引以为戒。
@@ -32,21 +34,45 @@
 - ROM 间的互斥 / 取舍（如状态栏配色 vs 实时模糊）写进 README「已知限制」与 DEVELOPMENT.md，
   并在 App 内做对应引导（如小米权限按钮）。
 
-## 4. 构建与发布（Bash 全程，勿用 PowerShell 后台任务）
+## 4. 构建与发布
+
+### 一键发版（推荐）
+
+改完版本号后跑**一条命令**，构建 → 对齐签名 → 自动校验指纹 → 打 tag → 建 GitHub Release 全部完成：
+
+```powershell
+# 需 PowerShell 前台执行；先允许本会话运行脚本
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+.\tools\release.ps1                # 默认即发版：tag + GitHub Release（挂签名 APK）
+.\tools\release.ps1 -SkipRelease   # 只出签名包，不发版（本机自测用）
+```
+
+- **发布正文取 `docs/release-notes/vX.Y.Z.md`**；文件缺失会回退到简短正文，并在输出里**明确告警**。
+- **发版依赖 `gh` 已认证**：先 `gh auth status` 确认（未登录跑 `gh auth login`）；
+  `gh` 不可用时脚本自动回退到 `$env:GITHUB_TOKEN` + REST API。
+- **幂等 + 友好失败**：tag / Release 已存在时提示后跳过（不致命）；`gh` 未认证时给出修复指引文字。
+- 指纹红线：`cca83079a87053a579262dfd8db5191af36349aacd2db26b5c5c67daf8f976ce`
+  （`CN=TimestampRecorder`），发布的 APK 必须是 release.keystore 签名（脚本签完自校验，不符即 **拒绝发布**）。
+- keystore 口令只从 `$env:TSR_KEYSTORE_PASS` 读取（或运行时输入），**严禁写进任何入库文件**。
+
+### 手动兜底（脚本不可用时）
 
 ```bash
 export JAVA_HOME="C:/Users/Baoru Lee/AppData/Local/Programs/Microsoft/jdk-17.0.20.1+1"
 export PATH="$JAVA_HOME/bin:$PATH"
 # 1) 编译自检（跑完立刻 ls 产物，不等通知）
 ./gradlew.bat assembleRelease --console=plain -q
-# 2) 对齐 + 签名（密码经临时文件注入；release.ps1 需 PowerShell 时必须前台+预灌密码）
+# 2) 对齐 + 签名后核对指纹
 "$JAVA_HOME/bin/java" -jar "$BT/lib/apksigner.jar" verify --print-certs <apk> | grep SHA-256
-# 3) 装机确认版本 → 4) push + tag → 5) gh_release.py（HTTPS_PROXY=7897）
+# 3) 装机确认版本 → 4) push + tag → 5) 建 Release（挂签名 APK，正文用中文 release-notes）
+git tag vX.Y.Z && git push origin vX.Y.Z
+gh release create vX.Y.Z --notes-file docs/release-notes/vX.Y.Z.md <apk>
 ```
 
-- 指纹红线：`cca83079a87053a579262dfd8db5191af36349aacd2db26b5c5c67daf8f976ce`
-  （`CN=TimestampRecorder`），发布的 APK 必须是 release.keystore 签名。
-- 沙箱代理端口会变：网络不通先探测（7897/5429/…），多为 Clash 未开，别改 git 配置。
+- 沙箱代理端口会变：网络不通先探测（7897/5429/…），多为 Clash 未开。
+  本机 git 全局配了 `http.proxy=127.0.0.1:7897`，Clash 未开时网络不通；手动 git 命令可加
+  `-c http.proxy= -c https.proxy=` 直连，**别改 git 全局代理配置**（`release.ps1` 的 git 操作已内置「失败即禁用代理重试」）。
+- ⚠️ **勿用 PowerShell 后台任务跑构建**，产物要用 `ls` 主动确认，别等完成通知。
 
 ## 5. 发版自查清单
 
