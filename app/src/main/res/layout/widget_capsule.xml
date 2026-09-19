@@ -1,17 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  单事件小组件 · 2×1 胶囊。
+  背景层 bgImage 由代码染色（见 widget_single.xml 顶部说明：规避多实例串色与 API 31 门槛）。
+  内边距 = 原「根 8dp + 内容 18/14dp」的合并值，视觉与改动前一致。
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rowRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="8dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
+        android:src="@drawable/bg_capsule" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="18dp"
-        android:paddingEnd="14dp">
+        android:paddingStart="26dp"
+        android:paddingEnd="22dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/tvName"

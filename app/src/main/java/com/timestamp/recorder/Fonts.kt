@@ -8,6 +8,7 @@ import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 
 /**
  * MiSans 字体加载器（小米官方字体，全球免费商用，出处已在「关于」页注明）。
@@ -48,7 +49,11 @@ object Fonts {
     /**
      * 给自定义字体挂上系统字体作为兜底（API 29+ 的 CustomFallbackBuilder）。
      * 子集字体缺字时自动回退系统字体，不会出现豆腐块；任何异常都退回基础字体。
+     *
+     * 标注 @RequiresApi：本方法用到 Font.Builder / Typeface.CustomFallbackBuilder（均 API 29+），
+     * 调用方 [loadOne] 已用 `SDK_INT < Q` 提前返回做守卫。加注解后 lint 的 NewApi 不再误报。
      */
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun withSystemFallback(assets: AssetManager, path: String, plain: Typeface): Typeface {
         return try {
             val family = FontFamily.Builder(Font.Builder(assets, path).build()).build()

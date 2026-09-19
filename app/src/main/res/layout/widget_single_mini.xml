@@ -2,20 +2,30 @@
 <!--
   单事件小组件 · 极小形态（约 1×1 格）。
   一块事件色方块 + 居中的事件名，点一下即记录；字号由代码按实际尺寸计算。
+  背景层 bgImage 由代码染色（见 widget_single.xml 顶部说明：规避多实例串色与 API 31 门槛）。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rowRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="2dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
+        android:src="@drawable/bg_corner_r16" />
 
     <TextView
         android:id="@+id/tvName"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
         android:textStyle="bold"

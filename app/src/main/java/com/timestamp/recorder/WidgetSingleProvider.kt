@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
@@ -111,28 +110,31 @@ class WidgetSingleProvider : AppWidgetProvider() {
                 }
             }
 
-            // 圆角背景 + 事件色 tint（纯色 shape 被 tint 直接替换为事件色）。
+            // 圆角背景：底层 ImageView 换圆角档位 + setColorFilter 染事件色。
+            // 不用「容器 background + tint」的原因：
+            //   ① 多实例共用同一 shape 资源时，tint 在部分 ROM launcher 上会写进共享 ConstantState，
+            //      后刷新的实例覆盖前者 → 两个异色小组件互相串色（BUG-1）；
+            //   ② RemoteViews.setColorStateList 是 API 31+，本工程 minSdk 24 会 NoSuchMethodError（BUG-2）。
+            // ImageView.setColorFilter 内部会 mutate，跨 ROM 稳定，且 API 1 起可用。
             // 1×1 时把圆角压到 16dp 以内 —— 32dp 圆角会把 ~70dp 的小方块啃成一个圆点。
             val corner = if (shape == Shape.MINI) {
                 minOf(WidgetPrefs.corner(context), 16)
             } else {
                 WidgetPrefs.corner(context)
             }
-            views.setInt(R.id.rowRoot, "setBackgroundResource", WidgetPrefs.cornerRes(corner))
-            views.setColorStateList(
-                R.id.rowRoot,
-                "setBackgroundTintList",
-                ColorStateList.valueOf(event?.color ?: MISSING_COLOR)
-            )
+            views.setImageViewResource(R.id.bgImage, WidgetPrefs.cornerRes(corner))
+            views.setInt(R.id.bgImage, "setColorFilter", event?.color ?: MISSING_COLOR)
 
             // 整块可点：写入一条记录
+            // requestCode 掺入实例 id + data 带上「实例 / 事件」，保证每个实例的 PI 唯一（BUG-3）
             val clickIntent = Intent(context, TimestampWidgetProvider::class.java).apply {
                 action = TimestampWidgetProvider.ACTION_RECORD
+                data = WidgetRecordHelper.recordUri(appWidgetId, eventId)
                 putExtra(TimestampWidgetProvider.EXTRA_EVENT_ID, eventId)
             }
             val pi = PendingIntent.getBroadcast(
                 context,
-                eventId.toInt(),
+                appWidgetId,
                 clickIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )

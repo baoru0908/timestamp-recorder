@@ -3,56 +3,76 @@
   单事件小组件 · 标准 / 大形态（2×2 及以上）。
   垂直堆叠：事件名 / 最近一次记录时间 /（大尺寸时）累计次数 /（大尺寸时）点击提示。
   各元素与字号由 WidgetSingleProvider 依据真实格子尺寸动态开关，小到 2×2、大到 4×4 都不空不挤。
+
+  背景层说明：底层 bgImage 承载「圆角 shape」，由代码用 setImageViewResource + setColorFilter 染色。
+  不用容器 background + tint 的原因：
+    ① 多实例共用同一 shape 资源时，View.setBackgroundTintList 在部分 ROM launcher 上不做 mutate，
+       tint 会写进共享 ConstantState，导致两个异色小组件互相串色（BUG-1）；
+    ② RemoteViews.setColorStateList 是 API 31+，本工程 minSdk 24 会 NoSuchMethodError（BUG-2）。
+  ImageView.setColorFilter 内部会 mutate，跨 ROM 稳定，且 API 1 起可用。
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rowRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="12dp">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/tvName"
+    <ImageView
+        android:id="@+id/bgImage"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:textColor="#FFFFFF"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:ellipsize="end"
-        android:maxLines="2" />
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
+        android:src="@drawable/bg_corner_r16" />
 
-    <!-- 窄格子（如 1×2）里完整时间戳放不下，用 match_parent + 居中 + 省略号兜住 -->
-    <TextView
-        android:id="@+id/tvInfo"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
         android:gravity="center"
-        android:textColor="#E6FFFFFF"
-        android:textSize="13sp"
-        android:fontFamily="monospace"
-        android:ellipsize="end"
-        android:maxLines="1" />
+        android:padding="12dp">
 
-    <TextView
-        android:id="@+id/tvCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#CCFFFFFF"
-        android:textSize="12sp" />
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:maxLines="2" />
 
-    <TextView
-        android:id="@+id/tvHint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:padding="2dp"
-        android:text="@string/widget_click_hint"
-        android:textColor="#B3FFFFFF"
-        android:textSize="11sp" />
-</LinearLayout>
+        <!-- 窄格子（如 1×2）里完整时间戳放不下，用 match_parent + 居中 + 省略号兜住 -->
+        <TextView
+            android:id="@+id/tvInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:textColor="#E6FFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/tvCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:padding="2dp"
+            android:text="@string/widget_click_hint"
+            android:textColor="#B3FFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+</FrameLayout>

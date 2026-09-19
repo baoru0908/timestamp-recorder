@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 
@@ -68,11 +69,16 @@ class TimestampWidgetProvider : AppWidgetProvider() {
                 // 彩色圆点：用 ImageView 的 colorFilter 染成事件色（可靠，跨 ROM）
                 views.setInt(DOT_IDS[i], "setColorFilter", ev.color)
 
+                // PendingIntent 判等只看 requestCode + action/data/class/identity，**extras 不参与**；
+                // 且 eventId 是 Long（毫秒时间戳），直接 toInt() 有截断碰撞窗口。故：
+                //   requestCode 掺入实例 id + data 带上「实例 / 事件」→ 每个实例的 PI 唯一，
+                //   不会出现「点 A 记录到 B」（BUG-3）。
                 val pi = PendingIntent.getBroadcast(
                     context,
-                    ev.id.toInt(),
+                    appWidgetId,
                     Intent(context, TimestampWidgetProvider::class.java).apply {
                         action = ACTION_RECORD
+                        data = WidgetRecordHelper.recordUri(appWidgetId, ev.id)
                         putExtra(EXTRA_EVENT_ID, ev.id)
                     },
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -94,9 +100,10 @@ class TimestampWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.tvMore, View.GONE)
             }
 
+            // 标题 / 空态指向 App 主页：按实例区分 requestCode，避免多实例共用同一 PI
             val openIntent = Intent(context, MainActivity::class.java)
             val openPi = PendingIntent.getActivity(
-                context, 0, openIntent,
+                context, appWidgetId, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widgetTitle, openPi)
@@ -120,6 +127,14 @@ class TimestampWidgetProvider : AppWidgetProvider() {
 
 /** 小组件点击记录公共处理：记录 + 刷新两种类型全部实例 */
 object WidgetRecordHelper {
+    /**
+     * 记录点击的 PendingIntent 唯一标识。
+     * data 参与 PendingIntent 判等，用它承载「实例 id + 事件 id」，
+     * 保证同一事件在不同小组件实例上的 PI 互不覆盖（见 BUG-3）。
+     */
+    fun recordUri(widgetId: Int, eventId: Long): Uri =
+        Uri.parse("tsr://widget/$widgetId/record/$eventId")
+
     fun handleRecord(context: Context, intent: Intent) {
         val eventId = intent.getLongExtra(TimestampWidgetProvider.EXTRA_EVENT_ID, -1L)
         if (eventId > 0) {

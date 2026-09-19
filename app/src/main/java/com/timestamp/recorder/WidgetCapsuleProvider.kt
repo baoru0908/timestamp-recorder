@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.widget.RemoteViews
 
 /**
@@ -23,8 +22,10 @@ class WidgetCapsuleProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_capsule)
             val color = event?.color ?: 0xFF546E7A.toInt()
-            views.setInt(R.id.rowRoot, "setBackgroundResource", R.drawable.bg_capsule)
-            views.setColorStateList(R.id.rowRoot, "setBackgroundTintList", ColorStateList.valueOf(color))
+            // 背景改用「ImageView 圆角 shape + setColorFilter」：
+            // 规避多实例共享 ConstantState 导致的串色（BUG-1）与 setColorStateList 的 API 31 门槛（BUG-2）
+            views.setImageViewResource(R.id.bgImage, R.drawable.bg_capsule)
+            views.setInt(R.id.bgImage, "setColorFilter", color)
 
             if (event != null) {
                 views.setTextViewText(R.id.tvName, event.name)
@@ -35,13 +36,15 @@ class WidgetCapsuleProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.tvAction, "")
             }
 
+            // requestCode 掺入实例 id + data 带上「实例 / 事件」，保证每个实例的 PI 唯一（BUG-3）
             val clickIntent = Intent(context, TimestampWidgetProvider::class.java).apply {
                 action = TimestampWidgetProvider.ACTION_RECORD
+                data = WidgetRecordHelper.recordUri(appWidgetId, eventId)
                 putExtra(TimestampWidgetProvider.EXTRA_EVENT_ID, eventId)
             }
             val pi = PendingIntent.getBroadcast(
                 context,
-                eventId.toInt(),
+                appWidgetId,
                 clickIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )

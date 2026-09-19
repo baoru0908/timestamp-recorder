@@ -2,20 +2,31 @@
 <!--
   单事件小组件 · 宽扁形态（约 2×1 / 3×1 / 4×1 格）。
   一行高度：左侧事件名，右侧最近一次记录时间 + 「＋」号，点一下即记录。
+  背景层 bgImage 由代码染色（见 widget_single.xml 顶部说明：规避多实例串色与 API 31 门槛）。
+  内边距 = 原「根 4dp + 内容 16/14dp」的合并值，视觉与改动前一致。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rowRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="4dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
+        android:src="@drawable/bg_corner_r16" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="14dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
         <TextView
             android:id="@+id/tvName"
