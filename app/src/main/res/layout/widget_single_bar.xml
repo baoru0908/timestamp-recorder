@@ -23,16 +23,22 @@
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="18dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="12dp"
         android:paddingTop="4dp"
         android:paddingBottom="4dp">
 
+        <!--
+          窄 2×1（实测约 144dp 宽）下，时间 + 加号图标会把事件名挤到只剩几个 dp，
+          中文名连省略号都放不下 → 整块空白（BUG-4）。
+          对策：① 缩小内边距；② tvName 设 minWidth 保住名字；③ 代码在宽度不足时隐藏加号图标。
+        -->
         <TextView
             android:id="@+id/tvName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:minWidth="44dp"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -47,6 +53,7 @@
             android:textColor="#E6FFFFFF"
             android:textSize="13sp"
             android:fontFamily="monospace"
+            android:ellipsize="end"
             android:maxLines="1" />
 
         <ImageView

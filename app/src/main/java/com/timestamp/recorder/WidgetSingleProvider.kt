@@ -79,6 +79,9 @@ class WidgetSingleProvider : AppWidgetProvider() {
                 }
 
                 // ── 宽扁（2×1 / 3×1 / 4×1）：一行放完 ──
+                // ⚠️ 宽度不足时隐藏「＋」图标（整块本就可点，图标只是提示）：
+                //    实测窄 2×1 只有约 144dp，时间(≈62dp) + 图标(20dp) + 外边距(16dp) + 内边距(28dp)
+                //    已占满，事件名只剩几个 dp —— 中文名连省略号都放不下，会整块空白（BUG-4）。
                 Shape.BAR -> RemoteViews(context.packageName, R.layout.widget_single_bar).apply {
                     setTextViewText(
                         R.id.tvName,
@@ -86,6 +89,8 @@ class WidgetSingleProvider : AppWidgetProvider() {
                     )
                     setTextViewText(R.id.tvInfo, if (last != null) TimeFormat.hm(last) else "")
                     setFloat(R.id.tvName, "setTextSize", (h / 2.6f).coerceIn(12f, 18f))
+                    // 3×1 及以上（≥150dp）空间充裕，保留图标
+                    setViewVisibility(R.id.ivIcon, if (w >= 150) View.VISIBLE else View.GONE)
                 }
 
                 // ── 2×2 及以上：完整卡片，次要信息随尺寸放出来 ──
