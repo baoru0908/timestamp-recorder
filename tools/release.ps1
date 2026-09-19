@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     TimestampRecorder - one-click build, sign and release script.
 .DESCRIPTION
