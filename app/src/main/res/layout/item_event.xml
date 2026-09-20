@@ -36,7 +36,8 @@
             android:layout_width="14dp"
             android:layout_height="14dp"
             android:layout_marginStart="6dp"
-            android:background="@drawable/bg_color_dot" />
+            android:background="@drawable/bg_color_dot"
+            android:importantForAccessibility="no" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -45,46 +46,53 @@
             android:layout_marginStart="12dp"
             android:orientation="vertical">
 
-            <!-- 名称行：事件名 + 次数徽章（区间事件显示「共 N 段」，点事件徽章隐藏） -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/tvEventName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="17sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvEventName"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvCountBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:paddingStart="7dp"
-                    android:paddingEnd="7dp"
-                    android:paddingTop="2dp"
-                    android:paddingBottom="2dp"
-                    android:maxLines="1"
-                    android:textSize="11sp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
+            <!-- match_parent + 单行省略：原来是 wrap_content 且没有 ellipsize，
+                 「进行中 · 已 01:23:45」这类长文案会顶出列宽被硬裁掉（而不是显示"…"） -->
             <TextView
                 android:id="@+id/tvEventInfo"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
         </LinearLayout>
+
+        <!-- 「共 N 段」徽章（仅时间段事件显示）。
+             ⚠️ 它是**卡片主轴的直接子元素**、并显式 layout_gravity="center_vertical" ——
+             于是和右边的「⋮」「开始」一样以卡片中线对齐（主人 2026-09-21：
+             "共 N 段的计数组件在卡片内上下对齐，对齐规则跟右边的三点相同"）。
+             早先它挂在"事件名那一行"里，所以只能贴着第一行，比 ⋮ 明显偏高。
+
+             minWidth + gravity=center：让「共 9 段」和「共 16 段」宽度一致、右缘落在同一条竖线上。
+             minWidth 对 TextView 生效（这正是它当初被误写到 LinearLayout 上、结果失效的原因）。 -->
+        <TextView
+            android:id="@+id/tvCountBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="2dp"
+            android:minWidth="56dp"
+            android:gravity="center"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="11sp"
+            android:visibility="gone" />
 
         <!-- 更多操作：编辑 / 删除 -->
         <ImageButton
@@ -97,26 +105,29 @@
             android:src="@drawable/ic_more_vert" />
 
         <!-- 快捷记录按钮：显示当前记录条数，点击直接为该事件打一条时间戳 -->
+        <!-- 固定宽度（而不是 wrap_content + minWidth）：minWidth 对 LinearLayout 不生效，
+             宽度随「开始 / 结束 / ＋ N」文案变 → ⋮ 与徽章整列跟着左右漂（2026-09-21 实测）。 -->
         <LinearLayout
             android:id="@+id/btnQuickRecord"
-            android:layout_width="wrap_content"
+            android:layout_width="@dimen/quick_record_width"
             android:layout_height="36dp"
             android:layout_marginStart="8dp"
-            android:minWidth="62dp"
             android:orientation="horizontal"
             android:gravity="center"
-            android:paddingStart="12dp"
-            android:paddingEnd="14dp"
             android:background="@drawable/bg_quick_record"
             android:foreground="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/quick_record">
 
+            <!-- 6dp 间距挂在**图标**上（marginEnd）而不是文字上（marginStart）：
+                 区间事件会隐藏图标，挂在文字上的话那 6dp 会留下，把「开始 / 结束」顶偏、
+                 看起来没有居中（主人 2026-09-21 反馈）。 -->
             <ImageView
                 android:id="@+id/ivPlus"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
                 android:src="@drawable/ic_record_plus"
                 android:importantForAccessibility="no" />
 
@@ -124,10 +135,12 @@
                 android:id="@+id/tvEventCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:gravity="center"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
                 android:textStyle="bold" />
+            <!-- 前景色：统一白色（主人 2026-09-21 决定，与详情页主按钮、小组件保持同一套方案）。
+                 代码里也会显式写一次白，避免将来主题变动导致这里被改色。 -->
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

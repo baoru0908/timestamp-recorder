@@ -1,134 +1,282 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  自定义小组件配置页。
+
+  2026-09-21 设计评审 C-1 重做：这一页原先是全 App 唯一「不像自己」的一页 ——
+  系统原生 Button（无圆角/无水波纹/无 M3 字重）、8 处硬编码中文文案、硬编码 #1E88E5 文字色、
+  根布局没有页面同款渐变底。现在统一到与 activity_widget_configure.xml 一致的版式：
+
+    MaterialToolbar（标题 + 返回 + 玻璃底色）
+      └ NestedScrollView（整页可滚，不再挤在两行里）
+          ├ 卡片 1：小组件标题（TextInputLayout 带计数）
+          ├ 卡片 2：背景颜色（Chip 色板 + 自定义取色 + 预览 + 选图/去图）
+          ├ 卡片 3：显示哪些事件（全选 / 清空 + 事件勾选列表）
+          └ 底部主按钮：完成
+
+  约定同其余页面：每个功能组 = 一张玻璃卡片（card_padding / radius_lg / glass_stroke），
+  卡片内按「标题 → 说明 → 控件」的固定节奏排布。
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@drawable/bg_main_gradient">
 
+    <!-- 高度必须是 wrap_content + minHeight：沉浸式会给 toolbar 加状态栏高度的 top padding，
+         若高度写死成 ?attr/actionBarSize，标题就会被这块 padding 挤压甚至被状态栏盖住 -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="?attr/actionBarSize" />
+        android:minHeight="?attr/actionBarSize"
+        android:background="@color/glass_toolbar"
+        app:navigationIcon="@drawable/ic_back"
+        app:title="@string/widget_custom_config_title"
+        app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingBottom="12dp">
+        android:paddingBottom="@dimen/space_3">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingStart="@dimen/screen_horizontal_padding"
+            android:paddingEnd="@dimen/screen_horizontal_padding"
+            android:paddingTop="@dimen/space_4">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="小组件标题"
-                android:textSize="13sp" />
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTitle"
+            <!-- ══════════ 1. 小组件标题 ══════════ -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="我的小组件"
-                android:inputType="textCapSentences"
-                android:maxLength="16" />
+                app:cardBackgroundColor="@color/glass_card"
+                app:cardCornerRadius="@dimen/radius_lg"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_stroke"
+                style="?attr/materialCardViewFilledStyle">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="背景颜色"
-                android:textSize="13sp"
-                android:layout_marginTop="16dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/groupBg"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/widget_cfg_title_label"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/widget_cfg_title_body"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/inputWidgetTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/widget_cfg_title_label"
+                        app:boxBackgroundMode="outline"
+                        app:counterEnabled="true"
+                        app:counterMaxLength="16">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences"
+                            android:maxLength="16" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══════════ 2. 背景颜色 + 背景图 ══════════ -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp" />
+                android:layout_marginTop="@dimen/space_3"
+                app:cardBackgroundColor="@color/glass_card"
+                app:cardCornerRadius="@dimen/radius_lg"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_stroke"
+                style="?attr/materialCardViewFilledStyle">
 
-            <ImageView
-                android:id="@+id/ivPreview"
-                android:layout_width="220dp"
-                android:layout_height="220dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:scaleType="centerCrop"
-                android:contentDescription="背景预览" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
 
-            <LinearLayout
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/widget_cfg_bg_label"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/widget_cfg_bg_body"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+
+                    <!-- 色板：预设色 + 自定义取色（色块由代码填充；文字色走主题主色，不再硬编码蓝） -->
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/groupBg"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp" />
+
+                    <!-- 背景预览：包进玻璃卡，与全 App「图像住在圆角卡里」的语言一致 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="14dp"
+                        app:cardBackgroundColor="@color/glass_card"
+                        app:cardCornerRadius="@dimen/radius_lg"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/glass_stroke">
+
+                        <ImageView
+                            android:id="@+id/ivPreview"
+                            android:layout_width="200dp"
+                            android:layout_height="200dp"
+                            android:contentDescription="@string/widget_cfg_preview_desc"
+                            android:scaleType="centerCrop" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPickImage"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="@dimen/space_3"
+                        android:text="@string/widget_cfg_pick_image"
+                        android:textSize="14sp"
+                        app:cornerRadius="@dimen/radius_md" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearImage"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="@dimen/space_1"
+                        android:text="@string/widget_cfg_clear_image"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══════════ 3. 显示哪些事件 ══════════ -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="@dimen/space_3"
+                app:cardBackgroundColor="@color/glass_card"
+                app:cardCornerRadius="@dimen/radius_lg"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_stroke"
+                style="?attr/materialCardViewFilledStyle">
 
-                <Button
-                    android:id="@+id/btnPickImage"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="选图做背景"
-                    android:textSize="13sp" />
+                    android:orientation="vertical"
+                    android:padding="18dp">
 
-                <Button
-                    android:id="@+id/btnClearImage"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="去掉图片"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="18dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/widget_cfg_events_label"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="显示哪些事件"
-                    android:textSize="13sp" />
+                        <!-- 全选 / 清空：文字按钮走主题主色（原为硬编码 #1E88E5）；
+                             48dp 触摸高度达标（原来只有 6dp padding ≈ 30dp） -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSelectAll"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:text="@string/widget_cfg_select_all"
+                            android:textSize="14sp" />
 
-                <TextView
-                    android:id="@+id/btnSelectAll"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="全选"
-                    android:textColor="#1E88E5"
-                    android:padding="6dp"
-                    android:textSize="13sp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnClearAll"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:text="@string/widget_cfg_clear_all"
+                            android:textSize="14sp" />
+                    </LinearLayout>
 
-                <TextView
-                    android:id="@+id/btnClearAll"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="清空"
-                    android:textColor="#1E88E5"
-                    android:padding="6dp"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/widget_cfg_events_hint"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
 
-            <LinearLayout
-                android:id="@+id/containerEvents"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="4dp" />
+                    <LinearLayout
+                        android:id="@+id/containerEvents"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </ScrollView>
 
-    <Button
+    <!-- 底部主行动：与「设置 → 数据备份」的主按钮同规格（56dp / radius_md / 16sp） -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="完成" />
+        android:layout_height="56dp"
+        android:layout_marginStart="@dimen/screen_horizontal_padding"
+        android:layout_marginEnd="@dimen/screen_horizontal_padding"
+        android:layout_marginTop="@dimen/space_2"
+        android:layout_marginBottom="@dimen/space_4"
+        android:text="@string/widget_cfg_save"
+        android:textSize="16sp"
+        app:cornerRadius="@dimen/radius_md" />
 </LinearLayout>

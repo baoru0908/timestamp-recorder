@@ -23,9 +23,12 @@
     <dimen name="fab_margin">24dp</dimen>
     <dimen name="fab_bottom_margin">96dp</dimen>
     <dimen name="list_bottom_padding">140dp</dimen>
-
-    <!-- 窗口版胶囊岛的模糊半径（系统级 background blur，固定一档，不跟随系统材质风格） -->
-    <dimen name="glass_blur_radius">14dp</dimen>
+    <!-- 首页事件卡右侧快捷钮的**固定宽度**。
+         ⚠️ 原来写的是 android:minWidth="62dp"，但 minWidth 只对 TextView/ImageView 这类
+         自己实现 onMeasure 的控件生效，**对 LinearLayout 是空操作** —— 结果「开始」只有
+         52dp、「＋ 52」有 65dp，宽度随文案变 → 左边的「⋮」和「共 N 段」徽章也跟着左右漂，
+         整列按钮没有对齐（主人 2026-09-21 反馈）。改成固定宽度后右侧形成一条整齐的轨道。 -->
+    <dimen name="quick_record_width">64dp</dimen>
 
     <!-- 时间线竖线距屏幕左边的距离 = 列表 paddingStart 16dp + 线区宽 22dp/2 - 线宽 2dp/2 -->
     <dimen name="timeline_line_inset">26dp</dimen>
@@ -41,8 +44,42 @@
     <!-- 顶部工具栏（独立玻璃窗口版）高度 -->
     <dimen name="top_bar_height">56dp</dimen>
 
-    <!-- 右上角「⋮」玻璃菜单：宽度写死，代码靠它把菜单算在屏幕内（不至于顶出画面） -->
-    <dimen name="overflow_menu_width">188dp</dimen>
-    <!-- 菜单顶边与「⋮」下沿的间距：够近（像从按钮里长出来），又不至于压到左边的副标题 -->
-    <dimen name="overflow_menu_gap">6dp</dimen>
+    <!-- ══════════ 液态玻璃参数（唯一事实源；深色覆盖见 values-night/dimens.xml）══════════
+         ⚠️ 这些值原先散落在 MainActivity / BaseActivity 的 Kotlin 里（14f*d / 16f*d / 0.38f…），
+         改一处要翻两个文件；统一收到 dimens 后深浅色各一套，代码只读资源。
+         背景：深色模式下「模糊」只降低锐度、不降低对比度 —— 内容照样清晰可读，
+         所以遮蔽力只能由 tintAlpha 提供（详见 2026-09-21 设计评审 V-1）。 -->
+    <dimen name="glass_blur_radius">14dp</dimen>
+    <dimen name="glass_refraction_top">16dp</dimen>
+    <dimen name="glass_refraction_island">20dp</dimen>
+    <dimen name="glass_refraction_fab">12dp</dimen>
+    <!-- 玻璃着色浓度（0~100）。分两档，因为两种场景的诉求不同：
+         · glass_tint_alpha        「玻璃观感优先」——主页的胶囊岛与顶部玻璃栏（设计语言本体）；
+         · glass_tint_alpha_solid  「可读性优先」——二级页顶栏（条目从标题下穿过，
+                                   还要叠一层 bg_top_scrim 遮罩兜住标题）。
+         深浅色各一套，见 values-night/dimens.xml。 -->
+    <integer name="glass_tint_alpha">12</integer>
+    <integer name="glass_tint_alpha_solid">12</integer>
+    <!-- 模糊半径的硬上限（px 会按密度换算；此前写成裸 50f 实为 50px≈13dp，属实现偏差，据此修正） -->
+    <dimen name="glass_blur_max">50dp</dimen>
+
+    <!-- ══════════ 大屏适配 ══════════
+         content_max_width = 0 表示「不限制」（手机竖屏），此时内容居中助手退化为空操作；
+         sw600dp（平板 / 折叠屏展开）覆盖为 640dp，内容列居中、行宽不再无限拉长。 -->
+    <dimen name="content_max_width">0dp</dimen>
+    <!-- 胶囊岛宽度上限：0 = 铺满（手机）；sw600dp 覆盖为 360dp，恢复「岛」的形态 -->
+    <dimen name="island_max_width">0dp</dimen>
+
+    <!-- 列表 / 页面水平留白（大屏下由 BaseActivity.centerContentColumn 叠加居中偏移） -->
+    <dimen name="list_horizontal_padding">16dp</dimen>
+    <dimen name="screen_horizontal_padding">20dp</dimen>
+
+    <!-- 详情页记录列表的底部基础留白；批量操作栏浮出时再叠加 selection_bar_clearance -->
+    <dimen name="detail_list_bottom_padding">24dp</dimen>
+    <dimen name="selection_bar_clearance">96dp</dimen>
+
+    <!-- 通用玻璃菜单（⋮ / 长按呼出）：宽度写死，代码靠它把菜单算在屏幕内（不至于顶出画面） -->
+    <dimen name="glass_menu_width">188dp</dimen>
+    <!-- 菜单顶边与锚点下沿的间距：够近（像从按钮里长出来），又不至于压到左边的副标题 -->
+    <dimen name="glass_menu_gap">6dp</dimen>
 </resources>

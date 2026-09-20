@@ -67,7 +67,10 @@ object WidgetPrefs {
 
     fun saveCustom(context: Context, widgetId: Int, title: String, bg: Int, events: Set<Long>) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(cTitle(widgetId), title.ifBlank { "我的小组件" })
+            .putString(
+                cTitle(widgetId),
+                title.ifBlank { context.getString(R.string.widget_default_title) }
+            )
             .putInt(cBg(widgetId), bg)
             .putStringSet(cEvents(widgetId), events.map { it.toString() }.toSet())
             .apply()

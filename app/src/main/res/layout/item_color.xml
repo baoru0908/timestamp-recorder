@@ -10,7 +10,10 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_gravity="center"
-        android:background="@drawable/bg_color_dot" />
+        android:background="@drawable/bg_color_dot"
+        android:importantForAccessibility="no" />
+    <!-- 色块本身是纯装饰：语义（颜色名 + 是否选中）由 ColorAdapter 写在 root 的
+         contentDescription 上，避免读屏软件逐个念"空按钮"（评审 A-1）。 -->
 
     <TextView
         android:id="@+id/tvPlus"

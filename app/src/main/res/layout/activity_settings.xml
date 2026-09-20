@@ -238,56 +238,52 @@
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 
-                    <LinearLayout
+                    <!-- 三种小组件：**纵向排列**。
+                         ⚠️ 原来是三颗横排（weight=1 各占 1/3）。M3 按钮左右各有 24dp 内边距，
+                         384dp 宽屏下每颗只剩约 48dp 放字 ——「自定义小组件」6 个字根本放不下，
+                         被截成「自定义小组」（主人 2026-09-21 实测反馈）。
+                         改成整宽纵向排列后，每颗都有约 260dp 放字，文案可**完整显示**，
+                         三颗宽度一致、文字居中，对齐也统一了。 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPinAll"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="48dp"
                         android:layout_marginTop="14dp"
-                        android:orientation="horizontal">
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:maxLines="1"
+                        android:gravity="center"
+                        android:textSize="14sp"
+                        android:text="@string/pin_widget_all" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPinAll"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            android:minWidth="0dp"
-                            android:maxLines="1"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:textSize="13sp"
-                            android:text="@string/pin_widget_all" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPinSingle"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:maxLines="1"
+                        android:gravity="center"
+                        android:textSize="14sp"
+                        android:text="@string/pin_widget_single" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPinSingle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:layout_weight="1"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            android:minWidth="0dp"
-                            android:maxLines="1"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:textSize="13sp"
-                            android:text="@string/pin_widget_single" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPinCustom"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:layout_weight="1"
-                            android:insetLeft="0dp"
-                            android:insetRight="0dp"
-                            android:minWidth="0dp"
-                            android:maxLines="1"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:textSize="13sp"
-                            android:text="@string/widget_custom_label" />
-                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPinCustom"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:maxLines="1"
+                        android:gravity="center"
+                        android:textSize="14sp"
+                        android:text="@string/widget_custom_label" />
 
                     <!-- 权限 / 设置引导（全机型显示）：部分 ROM 对「一键添加」有额外限制 ——
                          小米需要先授予「桌面快捷方式」权限（米系推荐先点一下）；
@@ -300,12 +296,20 @@
                         android:orientation="vertical"
                         android:visibility="gone">
 
+                        <!-- ⚠️ 不要写 maxLines="1"：M3 按钮左右各 24dp 内边距，
+                             「授予「桌面快捷方式」权限（小米推荐先点）」这类长文案会被硬裁掉。
+                             这里收窄内边距 + 允许换行（minHeight 48dp 兜住触摸高度），
+                             保证任何机型/字号下文案都完整显示。 -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnPermSettings"
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:maxLines="1"
+                            android:minHeight="48dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
                             android:textSize="13sp"
                             android:text="@string/pin_perm_btn" />
 

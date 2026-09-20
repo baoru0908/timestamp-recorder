@@ -56,12 +56,20 @@
             android:ellipsize="end"
             android:maxLines="1" />
 
-        <ImageView
+        <!-- 「＋」用文字而不是矢量图标：
+             ① 小组件里要给图标换前景色只能走 setColorFilter，而多个实例共用同一个
+                drawable 资源 id 时滤镜会写进共享 ConstantState → 异色实例互相串色（BUG-1/订正）；
+             ② setTextColor 是 RemoteViews 上**明确安全**的着色通道（文字不共享 ConstantState）。
+             所以这里放一个文字加号，颜色由 WidgetSingleProvider 按背景亮度写入。 -->
+        <TextView
             android:id="@+id/ivIcon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:src="@drawable/ic_record_plus"
+            android:text="＋"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:importantForAccessibility="no" />
     </LinearLayout>
 </FrameLayout>

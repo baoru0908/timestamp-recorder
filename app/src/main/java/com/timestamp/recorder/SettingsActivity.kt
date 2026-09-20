@@ -59,7 +59,7 @@ class SettingsActivity : BaseActivity() {
                     return@registerForActivityResult
                 }
                 val totalRecords = data.records.values.sumOf { it.size }
-                MaterialAlertDialogBuilder(this)
+                MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
                     .setTitle(R.string.backup_import_confirm_title)
                     .setMessage(getString(R.string.backup_import_confirm_msg, data.events.size, totalRecords))
                     .setPositiveButton(R.string.backup_import_confirm) { _, _ ->
@@ -85,6 +85,11 @@ class SettingsActivity : BaseActivity() {
         setupChrome(binding.toolbar, binding.appBar, binding.root, R.string.settings_title, showBack = true, scrollContent = binding.scrollContent)
         // 液态玻璃顶栏（与主页同源）：内容滚动时从玻璃底下穿过实时折射
         installLiquidTopGlass(binding.topGlass, binding.appBar, binding.scrollContent)
+        // 大屏内容列居中（手机上是空操作）
+        centerContentColumn(
+            binding.scrollContent.getChildAt(0) as View,
+            resources.getDimensionPixelSize(R.dimen.screen_horizontal_padding)
+        )
 
         // 小组件圆角档位
         when (WidgetPrefs.corner(this)) {
@@ -191,7 +196,7 @@ class SettingsActivity : BaseActivity() {
             }
         }
         // 桌面未开放该能力（小米 HyperOS / 真我 realme UI 等实测无效）：退回手动添加指引
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.pin_guide_title)
             .setMessage(R.string.pin_guide_msg)
             .setPositiveButton(R.string.i_know, null)

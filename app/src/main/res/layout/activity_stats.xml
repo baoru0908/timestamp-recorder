@@ -49,7 +49,8 @@
                         android:id="@+id/viewFocusDot"
                         android:layout_width="12dp"
                         android:layout_height="12dp"
-                        android:background="@drawable/bg_color_dot" />
+                        android:background="@drawable/bg_color_dot"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:id="@+id/tvFocusName"
@@ -260,7 +261,8 @@
                         android:id="@+id/viewBusiestDot"
                         android:layout_width="14dp"
                         android:layout_height="14dp"
-                        android:background="@drawable/bg_color_dot" />
+                        android:background="@drawable/bg_color_dot"
+                        android:importantForAccessibility="no" />
 
                     <LinearLayout
                         android:layout_width="0dp"

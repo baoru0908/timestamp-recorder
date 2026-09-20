@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏滚动遮罩（AppBar 背景）。
+
+  ## 为什么顶栏必须有"确定的底"
+
+  AppBar 自身背景是 transparent，可见的"底"只有两种来源：
+    ① 液态玻璃（AGSL 折射 + 模糊 + 着色）—— 只在 API 33+ 可用；
+    ② 这层遮罩。
+  玻璃再厚本质也只是一层薄膜：内容滚到标题下面时仍会透出文字轮廓，
+  而 API < 33 的机器玻璃直接不可用（此前做法是把玻璃藏掉，顶栏于是变成**完全透明**，
+  列表文字从标题下面穿过去、与标题重叠）。
+
+  遮罩是"救生圈"：无论玻璃在不在、厚不厚，标题行永远有一层自己的底。
+  它对"未滚动"状态几乎无感（被遮的是页面自己的渐变底），只在内容穿过时才发言。
+
+  三档渐变（实 → 半 → 全透）而不是两档：两档线性渐变在标题所在的中段衰减太快，
+  会出现一条明显的"分界线"；中间停一档 40% 之后过渡自然。
+  颜色本身跟着深浅色走（values / values-night 各一套）。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="@color/glass_toolbar"
+        android:centerColor="@color/glass_toolbar_mid"
+        android:endColor="@color/glass_toolbar_none"
+        android:centerY="0.72" />
+</shape>

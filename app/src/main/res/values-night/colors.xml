@@ -9,9 +9,31 @@
     <color name="md_outline">#938F99</color>
     <color name="text_secondary">#8A97A8</color>
 
+    <!-- 深色专用主色：原值 #1565C0 直接落在 #141218 上只有 3.24:1，正文不达 WCAG AA。
+         注意：本 App 会通过 DynamicColors 走系统壁纸取色（多数机型上会用系统色覆盖它），
+         这一对值是**动态取色不可用时的兜底**，保证兜底路径也达标（#8AB4F8 on #141218 ≈ 8.1:1）。 -->
+    <color name="md_primary">#8AB4F8</color>
+    <color name="md_on_primary">#003063</color>
+    <color name="md_primary_container">#0A3D6E</color>
+    <color name="md_on_primary_container">#D6E3FF</color>
+
     <!-- 毛玻璃（Glassmorphism）深色 -->
+    <!-- 玻璃着色（主页）：深蓝黑 = 原实现 tintColor(0.12, 0.12, 0.18) 的 sRGB 等价色。
+         38% 浓度下是一层薄薄的冷色雾 —— 这是"液体玻璃"该有的样子。 -->
+    <color name="glass_tint">#1F1F2E</color>
+    <!-- 玻璃着色（二级页顶栏）：近黑，配合 bg_top_scrim 把标题行钉死。 -->
+    <color name="glass_tint_solid">#0E1014</color>
+    <!-- 内容卡：极淡的一层，卡片靠 1dp 描边成形 -->
     <color name="glass_card">#33000000</color>
-    <color name="glass_stroke">#26FFFFFF</color>
-    <color name="glass_toolbar">#66141218</color>
-    <color name="glass_menu">#8A141218</color>
+    <!-- 描边：浮层与内容卡共用的轮廓色（#26 在深色下几乎不可见，提到 #33） -->
+    <color name="glass_stroke">#33FFFFFF</color>
+    <!-- 顶栏：72% —— 滚动时内容从底下穿过，必须"压得住"（原 40% 会叠字） -->
+    <color name="glass_toolbar">#B8141218</color>
+    <color name="glass_toolbar_mid">#6B141218</color>
+    <color name="glass_toolbar_none">#00141218</color>
+    <!-- 「⋮」展开的玻璃卡片：**浮层**接近不透明（94%），
+         否则下层文字会直接穿到菜单文字上形成双层文字（评审 V-2 实测）。
+         用比页面底色略亮的 #1E2128，让浮层与背景有明确的"抬升"关系。 -->
+    <color name="glass_menu">#FA1E2128</color>
+    <color name="glass_dialog">#F71C1F26</color>
 </resources>

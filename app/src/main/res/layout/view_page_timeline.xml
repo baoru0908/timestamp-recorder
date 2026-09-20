@@ -31,8 +31,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="@dimen/list_horizontal_padding"
+        android:paddingEnd="@dimen/list_horizontal_padding"
         android:paddingTop="0dp"
         android:paddingBottom="0dp"
         android:scrollbars="vertical" />

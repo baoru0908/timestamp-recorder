@@ -25,12 +25,25 @@
     <color name="ic_launcher_background">#14306B</color>
 
     <!-- 毛玻璃（Glassmorphism） -->
+    <!-- 玻璃着色：**sRGB 十六进制**，代码负责换算成着色器要的线性空间（见 Glass.kt 说明）。
+         浅色模式=一层白雾，把浅底上的深字洗淡；深色模式必须给近黑色（见 values-night），
+         给"深蓝"这种中灰会越涂越亮。 -->
+    <color name="glass_tint">#FFFFFF</color>
+    <color name="glass_tint_solid">#FFFFFF</color>
     <color name="glass_card">#E8FFFFFF</color>
     <color name="glass_stroke">#1A1565C0</color>
     <!-- 工具栏玻璃：刻意留透（75%）—— 时间线底轨要从工具栏底下透出来，屏幕上下才连成一条 -->
     <color name="glass_toolbar">#BFFBF8FF</color>
-    <!-- 「⋮」展开的玻璃卡片：比工具栏稍实一点（80%），菜单里的文字才压得住背后的花花绿绿 -->
-    <color name="glass_menu">#CCF7F4FF</color>
+    <!-- 顶栏滚动遮罩的三档（实 → 半 → 全透）：让标题行在任何滚动位置都有一个**确定的底**。
+         遮罩是"救生圈"：液态玻璃只在 API 33+ 可用、且玻璃再厚也只是"薄膜"，
+         内容滚到标题下面时仍然可能透出文字（评审 V-1 / I-3）。 -->
+    <color name="glass_toolbar_mid">#6BFBF8FF</color>
+    <color name="glass_toolbar_none">#00FBF8FF</color>
+    <!-- 「⋮」展开的玻璃卡片：**浮层**，比工具栏更实（95%）—— 菜单里的文字要压住背后的一切，
+         留透会让下层文字穿到菜单上（评审 V-2）。 -->
+    <color name="glass_menu">#FAF7F4FF</color>
+    <!-- 确认类弹窗的面色（与浮层同族，略实） -->
+    <color name="glass_dialog">#F7F7F4FF</color>
 
     <!-- 事件分类色板（12 色） -->
     <color name="ev_red">#E53935</color>

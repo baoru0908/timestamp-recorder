@@ -1,5 +1,7 @@
 package com.timestamp.recorder
 
+import android.graphics.Color
+
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,7 +39,18 @@ data class TimeInterval(
     fun duration(now: Long = System.currentTimeMillis()): Long = (end ?: now) - start
 }
 
-/** 分类染色色板（Material 风格 24 色） */
+/**
+ * 分类染色色板（Material 风格 24 色）
+ *
+ * 🔒 **色板数值永久冻结（2026-09-21 主人明确要求）**：
+ * 这 24 个 ARGB 值会被**持久化到用户数据里**（SharedPreferences 的事件 color 字段、
+ * 以及 format 2 备份 JSON 的 events[].color），是已发布版本的行为契约。
+ * 任何"重新配色 / 压深 / 换色相"的改动都会**静默改变老用户所有事件的观感**，
+ * 并且会让「恢复旧备份」后的显示与当初不一致 —— 所以**不要改这里的任何数值**，
+ * 也不要调整顺序（`colors.xml` 的 ev_* 与 strings.xml 的 event_color_names 按同一顺序对齐）。
+ *
+ * 需要解决"浅色事件上白字看不清"时，走 [onColor] 换**前景色**，而不是动色板。
+ */
 object EventColors {
     val palette = listOf(
         // 第一组（原 12 色）
@@ -64,10 +77,102 @@ object EventColors {
         0xFF5C6BC0.toInt(), // 浅靛
         0xFFAB47BC.toInt(), // 浅紫
         0xFFEC407A.toInt(), // 玫粉
-        0xFF8D6E63.toInt(), // 浅棕
-        0xFF78909C.toInt()  // 浅蓝灰
+        0xFF8D6E63.toInt()  // 浅棕
+        // 2026-09-21：移除「浅蓝灰 #78909C」——它与「蓝灰 #546E7A」区分度最低、观感最浑，
+        // 去掉后 23 色 + 末尾/开头一格「自定义」正好凑成 4×6 = 24 格的整行网格。
+        // ⚠️ 只影响"以后能选哪些色"：已存在事件的 color 是存进数据的整数，一个都没动。
     )
     fun random(): Int = palette.random()
+
+    /**
+     * 事件色当作**背景**时的可读前景色。
+     *
+     * 规则（2026-09-21 主人拍板的两条要求合起来）：
+     * - **默认白色** —— 全 App 统一白字最一致（曾试过"按对比度逐个选白/黑"，
+     *   同一列里黑白混排不统一，被否掉）；
+     * - **底色过亮时才转近黑** —— 纯白 #FFFFFF（白字 1:1）、明黄 #FDD835（1.40:1）、
+     *   琥珀 #F9A825（1.97:1）这类底色上白字等于消失，属于"白色底的文字可读性"问题，
+     *   必须兜住。
+     *
+     * 判定用**相对亮度 > 0.45**（而不是逐色比对比度）：这样只会翻掉"白/亮黄"这一档，
+     * 色板 23 色里仅明黄、琥珀两种会转深色，白字方案在其余 21 色上全部保留。
+     */
+    /** 底色"过亮"的判定线（WCAG 相对亮度）：白/明黄/琥珀这一档 */
+    const val LIGHT_BACKGROUND_LUMINANCE = 0.45
+
+    fun onColor(background: Int): Int =
+        if (relativeLuminance(background) > LIGHT_BACKGROUND_LUMINANCE) NEAR_BLACK else WHITE
+
+    /** 白字达标？ */
+    fun whitePasses(background: Int): Boolean = contrastWithWhite(background) >= 4.5
+
+    /** 白色正文的 WCAG AA 门槛 */
+    const val WHITE_TEXT_MIN_CONTRAST = 4.5
+
+    /**
+     * 给定色相/饱和度，求「还能让白字达标」的最大明度值。
+     *
+     * 用于自定义取色器：它把 SV 面板的**纵向范围**按这个上限压下来，
+     * 于是面板里每一个点都是"白字读得清"的颜色 —— 从根上避免挑出一个
+     * 白色/极浅色事件，导致卡片上的白点、白色药丸、白色文字全部糊在一起
+     * （2026-09-21 真机实测：#FFFFFF 事件在深色卡片上就是一片白）。
+     *
+     * 相对亮度对 v 单调递增，所以用二分（10 次足够，误差 <0.1%）。
+     */
+    fun maxValueForWhite(hue: Float, sat: Float): Float {
+        var lo = 0.05f
+        var hi = 1f
+        if (contrastWithWhite(Color.HSVToColor(floatArrayOf(hue, sat, hi))) >= WHITE_TEXT_MIN_CONTRAST) {
+            return hi
+        }
+        repeat(12) {
+            val mid = (lo + hi) / 2f
+            if (contrastWithWhite(Color.HSVToColor(floatArrayOf(hue, sat, mid))) >= WHITE_TEXT_MIN_CONTRAST) {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        return lo
+    }
+
+    /**
+     * 把一个任意颜色夹到「白字可读」的范围（保持色相/饱和度，只压明度）。
+     * 打开取色器时对初始色先过一次，于是像 #FFFFFF 这种历史颜色也能被纠正回可用状态。
+     */
+    fun forWhiteText(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        val maxV = maxValueForWhite(hsv[0], hsv[1])
+        if (hsv[2] <= maxV) return color
+        hsv[2] = maxV
+        return Color.HSVToColor(hsv)
+    }
+
+    val WHITE = 0xFFFFFFFF.toInt()
+    /** 不用纯黑：与 Material 的 onSurface(#1A1C1E) 同族，避免在彩色底上显得生硬 */
+    val NEAR_BLACK = 0xFF1A1C1E.toInt()
+
+    /** sRGB 单通道线性化（WCAG 2.1 定义的分段函数） */
+    private fun channelLuminance(v: Int): Double {
+        val s = v / 255.0
+        return if (s <= 0.03928) s / 12.92 else Math.pow((s + 0.055) / 1.055, 2.4)
+    }
+
+    /** 相对亮度：0.2126R + 0.7152G + 0.0722B */
+    private fun relativeLuminance(color: Int): Double =
+        0.2126 * channelLuminance((color shr 16) and 0xFF) +
+                0.7152 * channelLuminance((color shr 8) and 0xFF) +
+                0.0722 * channelLuminance(color and 0xFF)
+
+    private fun contrastRatio(a: Double, b: Double): Double =
+        (maxOf(a, b) + 0.05) / (minOf(a, b) + 0.05)
+
+    private fun contrastWithWhite(color: Int): Double =
+        contrastRatio(relativeLuminance(color), 1.0)
+
+    private fun contrastWithBlack(color: Int): Double =
+        contrastRatio(relativeLuminance(color), 0.0)
 }
 
 /** 时间线条目：一条记录 + 所属事件信息（事件名 / 事件色在记录时快照，避免查询时反复取事件表） */

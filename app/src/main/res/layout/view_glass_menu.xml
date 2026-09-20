@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  通用玻璃菜单（⋮ / 长按呼出的选单）。
+
+  和主页「⋮」原本那块玻璃卡片是同一套东西，只是**行数可变**：
+  行由 GlassMenu 代码动态 inflate（item_overflow_row.xml），所以这里只放一个容器。
+  宽度照旧写死成 dimen —— 代码要拿它算屏幕内定位。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/menuRoot"
+    android:layout_width="@dimen/glass_menu_width"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="8dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:id="@+id/menuRows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</LinearLayout>

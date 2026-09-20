@@ -41,8 +41,12 @@ class WidgetCustomConfigureActivity : BaseActivity() {
     private val pickImage = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) {
             val saved = copyImageToInternal(uri)
-            if (saved != null) { imagePath = saved; showPreview(saved); Toast.makeText(this, "已设置背景图", Toast.LENGTH_SHORT).show() }
-            else Toast.makeText(this, "图片读取失败", Toast.LENGTH_SHORT).show()
+            if (saved != null) {
+                imagePath = saved; showPreview(saved)
+                Toast.makeText(this, R.string.widget_cfg_image_set, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, R.string.widget_cfg_image_failed, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -72,7 +76,7 @@ class WidgetCustomConfigureActivity : BaseActivity() {
             if (imagePath.isNotBlank()) { runCatching { File(imagePath).delete() } }
             imagePath = ""
             showPreview("")
-            Toast.makeText(this, "已去掉背景图", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.widget_cfg_image_cleared, Toast.LENGTH_SHORT).show()
         }
 
         events = repo.getEvents()
@@ -87,7 +91,10 @@ class WidgetCustomConfigureActivity : BaseActivity() {
 
         findViewById<Button>(R.id.btnSave).setOnClickListener {
             val title = findViewById<android.widget.EditText>(R.id.editTitle).text.toString().trim()
-            if (checked.isEmpty()) { Toast.makeText(this, "请至少勾选一个事件", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (checked.isEmpty()) {
+                Toast.makeText(this, R.string.widget_cfg_pick_one, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             WidgetPrefs.saveCustom(this, widgetId, title, chosenBg, checked)
             WidgetPrefs.setCustomImage(this, widgetId, imagePath)
             val manager = AppWidgetManager.getInstance(this)
@@ -101,7 +108,8 @@ class WidgetCustomConfigureActivity : BaseActivity() {
         val group = findViewById<ChipGroup>(R.id.groupBg)
         group.removeAllViews()
         val d = resources.displayMetrics.density
-        bgOptions.forEach { color ->
+        val names = resources.getStringArray(R.array.widget_bg_color_names)
+        bgOptions.forEachIndexed { index, color ->
             val chip = Chip(this).apply {
                 text = ""
                 isCheckable = true
@@ -109,6 +117,11 @@ class WidgetCustomConfigureActivity : BaseActivity() {
                 chipStrokeWidth = (if (color == chosenBg) 3 else 1).toFloat() * d
                 chipStrokeColor = android.content.res.ColorStateList.valueOf(Color.WHITE)
                 isChecked = color == chosenBg
+                // 纯色块 Chip 对读屏软件是"空按钮"——补上颜色名（评审 A-1/A-4）
+                contentDescription = getString(
+                    R.string.cd_widget_bg_chip,
+                    names.getOrNull(index) ?: ""
+                )
                 setOnClickListener { chosenBg = color; buildBgChips() }
             }
             group.addView(chip)
@@ -116,13 +129,14 @@ class WidgetCustomConfigureActivity : BaseActivity() {
         val isCustom = chosenBg !in bgOptions
         val custom = Chip(this).apply {
             isCheckable = true
+            contentDescription = getString(R.string.widget_cfg_bg_custom)
             if (isCustom) {
                 text = ""
                 chipBackgroundColor = android.content.res.ColorStateList.valueOf(chosenBg)
                 chipStrokeWidth = 3f * d
                 chipStrokeColor = android.content.res.ColorStateList.valueOf(Color.WHITE)
             } else {
-                text = "＋自定义"
+                text = getString(R.string.widget_cfg_bg_custom)
                 chipStrokeWidth = 1f * d
                 chipStrokeColor = android.content.res.ColorStateList.valueOf(Color.WHITE)
             }
@@ -150,6 +164,8 @@ class WidgetCustomConfigureActivity : BaseActivity() {
                 val s = (14 * d).toInt()
                 layoutParams = LinearLayout.LayoutParams(s, s).apply { marginEnd = (12 * d).toInt() }
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(ev.color) }
+                // 纯装饰色块：不要把焦点浪费在它身上（颜色语义由后面的勾选框一起表达）
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
             val name = TextView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)

@@ -89,7 +89,7 @@
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/tab_bar_height"
-        android:layout_gravity="bottom"
+        android:layout_gravity="bottom|center_horizontal"
         android:layout_marginStart="@dimen/space_4"
         android:layout_marginEnd="@dimen/space_4">
 

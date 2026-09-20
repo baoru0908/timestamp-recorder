@@ -16,13 +16,15 @@
             android:id="@+id/vLine"
             android:layout_width="2dp"
             android:layout_height="match_parent"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+            android:importantForAccessibility="no" />
 
         <View
             android:id="@+id/vDot"
             android:layout_width="13dp"
             android:layout_height="13dp"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"
+            android:importantForAccessibility="no" />
     </FrameLayout>
 
     <com.google.android.material.card.MaterialCardView

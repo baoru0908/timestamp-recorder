@@ -57,8 +57,30 @@ class StatsActivity : BaseActivity() {
         binding.chartEvents.setData(events.map { BarItem(it.name, countOf(it), it.color) })
         bindDuration()
         setupRangeToggle()
+        applyChartA11y()
 
         binding.tvNoData.visibility = if (events.sumOf { countOf(it) } == 0) View.VISIBLE else View.GONE
+
+        // 大屏内容列居中（手机上是空操作）：平板/折叠屏/横屏下 KPI 与图表不再横贯整屏
+        centerContentColumn(
+            binding.scrollContent.getChildAt(0) as View,
+            resources.getDimensionPixelSize(R.dimen.screen_horizontal_padding)
+        )
+    }
+
+    /**
+     * 自绘 Canvas 图表对读屏软件是**一片空白**（没有文本节点），必须补一句人能听懂的话。
+     * 与其让它逐个念数字，不如直接给结论："最多的是喝水，共 52 条"（评审 A-3）。
+     */
+    private fun applyChartA11y() {
+        val busiest = events.maxByOrNull { countOf(it) }
+        val busiestCount = busiest?.let { countOf(it) } ?: 0
+        binding.chartEvents.contentDescription =
+            if (busiest == null || busiestCount == 0) {
+                getString(R.string.cd_chart_events_empty)
+            } else {
+                getString(R.string.cd_chart_events, busiest.name, busiestCount, events.size)
+            }
     }
 
     private fun countOf(e: TimestampEvent): Int =
@@ -142,14 +164,26 @@ class StatsActivity : BaseActivity() {
     private fun setRange(days: Int) {
         rangeDays = days
         binding.tvTrendTitle.text = getString(R.string.stats_by_day, days)
-        binding.chartDays.setData(computeDaily(days))
+        val data = computeDaily(days)
+        binding.chartDays.setData(data)
+        // 同样给趋势图一句摘要（自绘图对读屏软件不可见）
+        binding.chartDays.contentDescription =
+            if (data.all { it.value == 0 }) {
+                getString(R.string.cd_chart_days_empty, days)
+            } else {
+                getString(R.string.cd_chart_days, days, data.sumOf { it.value }, data.maxOf { it.value })
+            }
         val sel = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorPrimary)
         val dim = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurfaceVariant)
         listOf(
             binding.btnRange7 to RANGES[0],
             binding.btnRange14 to RANGES[1],
             binding.btnRange30 to RANGES[2]
-        ).forEach { (btn, d) -> btn.setTextColor(if (d == days) sel else dim) }
+        ).forEach { (btn, d) ->
+            btn.setTextColor(if (d == days) sel else dim)
+            // 选中态只靠颜色会让读屏用户与色觉障碍用户都看不出当前口径（评审 A-4）
+            btn.isSelected = d == days
+        }
     }
 
     private fun computeDaily(days: Int): List<BarItem> {

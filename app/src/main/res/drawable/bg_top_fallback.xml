@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API < 33 的顶栏降级底（"普通玻璃"）。
+
+  液态玻璃（AGSL 折射 + 色散）只在 API 33+ 可用；更低版本原先的做法是
+  「把玻璃藏掉」——但 AppBar 自身的背景是 @android:color/transparent，玻璃又是整条
+  顶栏唯一的"底"，于是顶栏退化成**完全没有背景**，滚动时列表内容会从标题文字下面
+  穿过去，形成文字重叠（2026-09-21 设计评审 I-3，minSdk 24 命中 Android 7～12L 全段）。
+
+  这里给一层半透明玻璃色 + 一条极淡的下沿分隔线，观感与液态玻璃同族，
+  但完全不依赖 AGSL —— 代码在 BaseActivity.installLiquidTopGlass 的 else 分支挂上它。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/glass_toolbar" />
+        </shape>
+    </item>
+    <!-- 下沿分隔线：让顶栏与滚动内容之间有一条明确的边界（玻璃模糊缺失时的替代暗示） -->
+    <item
+        android:height="1dp"
+        android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/glass_stroke" />
+        </shape>
+    </item>
+</layer-list>

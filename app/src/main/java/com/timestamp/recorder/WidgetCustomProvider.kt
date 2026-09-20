@@ -38,7 +38,15 @@ class WidgetCustomProvider : AppWidgetProvider() {
             val bmp = if (imagePath.isNotBlank()) loadScaledBitmap(context, imagePath) else null
             if (bmp != null) views.setImageViewBitmap(R.id.bgCustom, bmp)
             else views.setImageViewBitmap(R.id.bgCustom, roundedRectBitmap(context, bg, WidgetPrefs.corner(context)))
+
+            // 前景色：背景是图片时保持白字（图片内容不可预测，白字 + 图片是通用组合）；
+            // 背景是纯色时按 onColor 规则（默认白、过亮转近黑）。
+            val onBg = if (bmp != null) EventColors.WHITE else EventColors.onColor(bg)
+            val onBgDim = withAlpha(onBg, 0xB3)
+
             views.setTextViewText(R.id.tvCustomTitle, title)
+            views.setTextColor(R.id.tvCustomTitle, onBg)
+            views.setTextColor(R.id.widgetEmpty, onBgDim)
 
             val repo = EventRepository(context)
             val events = if (selected.isEmpty()) emptyList()
@@ -65,6 +73,8 @@ class WidgetCustomProvider : AppWidgetProvider() {
                     if (last != null) TimeFormat.hm(last) else context.getString(R.string.widget_row_no_record)
                 }
                 views.setTextViewText(TIME_IDS[i], timeText)
+                views.setTextColor(NAME_IDS[i], onBg)
+                views.setTextColor(TIME_IDS[i], onBgDim)
                 views.setTextViewText(DOT_IDS[i], "●")
                 views.setInt(DOT_IDS[i], "setTextColor", ev.color)
 

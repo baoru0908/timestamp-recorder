@@ -10,15 +10,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.core.view.updatePadding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.timestamp.recorder.databinding.ActivityEventDetailBinding
@@ -33,6 +31,14 @@ class EventDetailActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_EVENT_ID = "extra_event_id"
+
+        // ⋮ 玻璃菜单的动作 id（原先由系统 options menu 的 itemId 承担）
+        private const val ACT_EDIT = 1
+        private const val ACT_EXPORT = 2
+        private const val ACT_CLEAR = 3
+        private const val ACT_DELETE_EVENT = 4
+        private const val ACT_STATS = 6
+        private const val ACT_TIMELINE = 7
     }
 
     private lateinit var binding: ActivityEventDetailBinding
@@ -94,14 +100,24 @@ class EventDetailActivity : BaseActivity() {
             }
             insets
         }
+        // 返回键交给菜单回调统一裁决（见 menuBackCallback）
+        onBackPressedDispatcher.addCallback(this, menuBackCallback)
         repo = EventRepository(this)
         eventId = intent.getLongExtra(EXTRA_EVENT_ID, -1L)
 
         binding.recyclerRecords.layoutManager = LinearLayoutManager(this)
         binding.recyclerRecords.adapter = adapter
+        // 大屏内容列居中（手机上是空操作）：平板/折叠屏/横屏下把主按钮与记录列收成居中一列
+        centerContentColumn(
+            binding.contentHost,
+            resources.getDimensionPixelSize(R.dimen.screen_horizontal_padding)
+        )
 
         binding.btnRecord.setOnClickListener { onPrimaryAction() }
         binding.btnUndo.setOnClickListener { undo() }
+
+        binding.btnMore.setOnClickListener { toggleActionMenu(it) }
+        binding.btnBatch.setOnClickListener { enterSelectionMode() }
 
         binding.btnSelectAll.setOnClickListener { toggleSelectAll() }
         binding.btnDeleteSelected.setOnClickListener { deleteSelected() }
@@ -116,6 +132,9 @@ class EventDetailActivity : BaseActivity() {
 
     override fun onPause() {
         stopTicker()
+        // 玻璃菜单是独立窗口，Activity 退后台时不会被自动收掉，必须手动关（与主页一致）。
+        // ⚠️ 用 closeNow（不播退场动画）：页面已在退场，再叠一层菜单动画只会显脏
+        GlassMenu.closeNow(this)
         super.onPause()
     }
 
@@ -125,7 +144,11 @@ class EventDetailActivity : BaseActivity() {
         val event = currentEvent()
         if (event == null) { finish(); return }
         binding.toolbar.title = event.name
-        binding.btnRecord.iconTint = ColorStateList.valueOf(0xFFFFFFFF.toInt())
+
+        // 主按钮前景色：默认白字，底色过亮（白/明黄/琥珀）时自动转近黑 —— 与事件卡同一套规则
+        val onPrimary = EventColors.onColor(event.color)
+        binding.btnRecord.setTextColor(onPrimary)
+        binding.btnRecord.iconTint = ColorStateList.valueOf(onPrimary)
 
         if (event.isInterval) {
             val ongoing = repo.ongoingInterval(eventId)
@@ -214,7 +237,7 @@ class EventDetailActivity : BaseActivity() {
 
     private fun confirmDelete(row: Row) {
         val msg = rowCopyText(row)
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.delete_record_title)
             .setMessage(getString(R.string.delete_record_msg, msg))
             .setPositiveButton(R.string.delete) { _, _ ->
@@ -243,17 +266,50 @@ class EventDetailActivity : BaseActivity() {
         }
         selectionMode = true
         selected.clear()
-        binding.selectionBar.visibility = View.VISIBLE
-        binding.recyclerRecords.updatePadding(bottom = 140)
+        showSelectionBar()
+        // ⚠️ 底部让位只声明"额外需要多少"，绝对值由 BaseActivity 统一算（base + extra + 导航栏 inset）。
+        //    曾经这里写 updatePadding(bottom = 140) —— **裸像素**（≈37dp）且退出时设成 24px（≈6dp），
+        //    把导航栏 inset 一起冲掉，导致退出批量后最后一条记录停在手势条下面点不到
+        //    （2026-09-21 设计评审 I-2 真机实证）。
+        setScrollExtraBottomPadding(resources.getDimensionPixelSize(R.dimen.selection_bar_clearance))
         adapter.notifyDataSetChanged()
         updateSelectionUI()
+    }
+
+    /** 批量操作栏浮出：位移 + 淡入，避免"突然出现一整条"的硬切（与菜单展开同语言） */
+    private fun showSelectionBar() {
+        val bar = binding.selectionBar
+        val offset = resources.getDimensionPixelSize(R.dimen.space_6).toFloat()
+        bar.animate().cancel()
+        bar.visibility = View.VISIBLE
+        bar.alpha = 0f
+        bar.translationY = offset
+        bar.animate().alpha(1f).translationY(0f)
+            .setDuration(180L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
+    }
+
+    /** 批量操作栏收起：动画结束后彻底 GONE，并把状态复位（下次浮出仍从头播） */
+    private fun hideSelectionBar() {
+        val bar = binding.selectionBar
+        val offset = resources.getDimensionPixelSize(R.dimen.space_6).toFloat()
+        bar.animate().cancel()
+        bar.animate().alpha(0f).translationY(offset)
+            .setDuration(140L)
+            .withEndAction {
+                bar.visibility = View.GONE
+                bar.alpha = 1f
+                bar.translationY = 0f
+            }
+            .start()
     }
 
     private fun exitSelectionMode() {
         selectionMode = false
         selected.clear()
-        binding.selectionBar.visibility = View.GONE
-        binding.recyclerRecords.updatePadding(bottom = 24)
+        hideSelectionBar()
+        setScrollExtraBottomPadding(0)
         adapter.notifyDataSetChanged()
     }
 
@@ -288,7 +344,7 @@ class EventDetailActivity : BaseActivity() {
         // 批量只用于点事件
         val millisSet = selected.filterIsInstance<Row.Point>().map { it.millis }.toSet()
         val n = millisSet.size
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.batch_delete_title)
             .setMessage(getString(R.string.batch_delete_msg, n))
             .setPositiveButton(R.string.delete) { _, _ ->
@@ -302,36 +358,82 @@ class EventDetailActivity : BaseActivity() {
             .show()
     }
 
-    // ---------- 菜单 ----------
+    // ---------- 菜单（统一走 GlassMenu 玻璃卡片，不再用系统溢出菜单）----------
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(Menu.NONE, 1, 0, R.string.menu_edit_event)
-        menu.add(Menu.NONE, 2, 0, R.string.export_records)
-        menu.add(Menu.NONE, 3, 0, R.string.menu_clear_records)
-        menu.add(Menu.NONE, 4, 0, R.string.menu_delete_event)
-        val batchItem = menu.add(Menu.NONE, 5, 0, R.string.menu_batch)
-        batchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        batchItem.setIcon(R.drawable.ic_check_box)
-        menu.add(Menu.NONE, 6, 0, R.string.menu_stats)
-        menu.add(Menu.NONE, 7, 0, R.string.menu_timeline)
-        return true
+    /**
+     * 事件详情页的动作菜单。
+     *
+     * ⚠️ 这里曾经用 `onCreateOptionsMenu` —— 那是**系统溢出菜单**：白底（深色下纯深灰）、
+     * 直角、系统字重、系统弹窗动效，和 App 的玻璃语言完全不是一个东西。
+     * 现在改成与主页「⋮」同源的 [GlassMenu]：
+     * 工具栏右侧两枚自绘按钮 = ☑ 批量管理（图标动作）+ ⋮ 其余动作。
+     *
+     * ⚠️ 走 [GlassMenu.toggle]：**再点一次同一个 ⋮ 就收起**，且收起是展开动画的时间反演
+     * （同 pivot、同时长 190ms、缓动 Decelerate↔Accelerate）；收起动画进行中再点一次
+     * 会反向展开回来，全程不重建窗口，所以不会闪。
+     */
+    private fun toggleActionMenu(anchor: View) {
+        val handle = GlassMenu.toggle(
+            activity = this,
+            anchor = anchor,
+            items = listOf(
+                GlassMenu.Item(R.drawable.ic_menu_edit, R.string.menu_edit_event, ACT_EDIT),
+                GlassMenu.Item(R.drawable.ic_menu_export, R.string.export_records, ACT_EXPORT),
+                GlassMenu.Item(R.drawable.ic_menu_stats, R.string.menu_stats, ACT_STATS),
+                GlassMenu.Item(R.drawable.ic_tab_timeline, R.string.menu_timeline, ACT_TIMELINE),
+                GlassMenu.Item(R.drawable.ic_menu_clear, R.string.menu_clear_records, ACT_CLEAR),
+                GlassMenu.Item(
+                    R.drawable.ic_menu_delete, R.string.menu_delete_event,
+                    ACT_DELETE_EVENT, destructive = true
+                )
+            ),
+            onDismiss = { tintMenuAnchor(anchor, false) }
+        ) { action ->
+            when (action) {
+                ACT_EDIT -> showEditDialog()
+                ACT_EXPORT -> startExport()
+                ACT_STATS -> startActivity(
+                    Intent(this, StatsActivity::class.java)
+                        .putExtra(StatsActivity.EXTRA_FOCUS_EVENT_ID, eventId)
+                )
+                ACT_TIMELINE -> startActivity(
+                    Intent(this, MainActivity::class.java)
+                        .putExtra(MainActivity.EXTRA_OPEN_TIMELINE, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+                ACT_CLEAR -> confirmClear()
+                ACT_DELETE_EVENT -> confirmDeleteEvent()
+            }
+        }
+        // 点亮状态跟着菜单真实状态走：再次点击（已在收起）立刻"灭灯"，反馈不等动画
+        tintMenuAnchor(anchor, handle.isOpen)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            1 -> showEditDialog()
-            2 -> startExport()
-            3 -> confirmClear()
-            4 -> confirmDeleteEvent()
-            5 -> enterSelectionMode()
-            6 -> startActivity(Intent(this, StatsActivity::class.java)
-                .putExtra(StatsActivity.EXTRA_FOCUS_EVENT_ID, eventId))
-            7 -> startActivity(Intent(this, MainActivity::class.java)
-                .putExtra(MainActivity.EXTRA_OPEN_TIMELINE, true)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-            else -> return super.onOptionsItemSelected(item)
+    /** 菜单展开时把锚点按钮点亮/复位（与主页同一套做法） */
+    private fun tintMenuAnchor(anchor: View, open: Boolean) {
+        val tint = com.google.android.material.color.MaterialColors.getColor(
+            binding.root,
+            if (open) com.google.android.material.R.attr.colorPrimary
+            else com.google.android.material.R.attr.colorOnSurface
+        )
+        (anchor as? android.widget.ImageView)?.imageTintList =
+            ColorStateList.valueOf(tint)
+    }
+
+    /**
+     * 菜单开着时，**返回键先收菜单**（走同一套退场动画），而不是直接退出本页。
+     *
+     * 玻璃菜单的窗口是 `FLAG_NOT_FOCUSABLE` 的（不吃焦点，否则会挡住下方列表的触摸），
+     * 按键到不了那个窗口 —— 不接管的话，菜单还开着、一按返回却退回上一页，很不直觉。
+     */
+    private val menuBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (GlassMenu.closeAnimated(this@EventDetailActivity)) return
+            // 没有菜单在开 → 临时让开，交回系统默认的返回行为
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
         }
-        return true
     }
 
     private fun showEditDialog() {
@@ -351,7 +453,7 @@ class EventDetailActivity : BaseActivity() {
         dlg.chipPoint.setOnCheckedChangeListener { _, c -> if (c) dlg.tvTypeHint.setText(R.string.event_type_point_hint) }
         dlg.chipInterval.setOnCheckedChangeListener { _, c -> if (c) dlg.tvTypeHint.setText(R.string.event_type_interval_hint) }
 
-        val dialog = MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.dialog_edit_event_title)
             .setView(dlg.root)
             .setNegativeButton(R.string.cancel, null)
@@ -381,7 +483,7 @@ class EventDetailActivity : BaseActivity() {
             Snackbar.make(binding.root, R.string.toast_empty, Snackbar.LENGTH_SHORT).show()
             return
         }
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.clear_records_title)
             .setMessage(getString(R.string.clear_records_msg, count))
             .setPositiveButton(R.string.delete) { _, _ ->
@@ -397,7 +499,7 @@ class EventDetailActivity : BaseActivity() {
     private fun confirmDeleteEvent() {
         val event = currentEvent() ?: return
         val count = if (event.isInterval) repo.intervalCount(eventId) else repo.recordCount(eventId)
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.delete_event_title)
             .setMessage(getString(R.string.delete_event_msg, event.name, count))
             .setPositiveButton(R.string.delete) { _, _ ->
@@ -495,6 +597,8 @@ class EventDetailActivity : BaseActivity() {
             holder.b.tvCopy.visibility = if (inSelection) View.GONE else View.VISIBLE
             holder.b.cbSelect.visibility = if (inSelection) View.VISIBLE else View.GONE
             holder.b.cbSelect.isChecked = selected.contains(row)
+            // 勾选框本身没有文字，读屏软件只会念"复选框"：把这条记录的时间作为它的标签（评审 A-1）
+            holder.b.cbSelect.contentDescription = holder.b.tvTime.text
             if (inSelection) {
                 holder.b.root.setOnClickListener { toggleSelection(row) }
                 holder.b.root.setOnLongClickListener { toggleSelection(row); true }

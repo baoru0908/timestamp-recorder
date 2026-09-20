@@ -23,6 +23,11 @@ class TutorialActivity : BaseActivity() {
         )
         // 液态玻璃顶栏（与主页同源）：内容滚动时从玻璃底下穿过实时折射
         installLiquidTopGlass(binding.topGlass, binding.appBar, binding.scrollContent)
+        // 大屏内容列居中（手机上是空操作）
+        centerContentColumn(
+            binding.scrollContent.getChildAt(0) as android.view.View,
+            resources.getDimensionPixelSize(R.dimen.screen_horizontal_padding)
+        )
 
         // 小组件一键添加在设置页（含机型权限引导）
         binding.btnGoSettings.setOnClickListener {

@@ -78,6 +78,10 @@ class WidgetSingleProvider : AppWidgetProvider() {
             // 进行中不再整块染红（太像报错、也盖掉事件色）：背景保持事件色，
             // 用小红点 + 文案「● 进行中」表达计时中。
             val bgColor = event?.color ?: MISSING_COLOR
+            val onBg = EventColors.onColor(bgColor)
+
+            // 前景色：默认白字、底色过亮转近黑（与 App 内同一套 onColor 规则）。
+            // 只用 setTextColor —— RemoteViews 上文字不共享 ConstantState，多实例绝无串色。
 
             val shape = shapeOf(w, h)
             val views: RemoteViews = when (shape) {
@@ -89,6 +93,7 @@ class WidgetSingleProvider : AppWidgetProvider() {
                         event?.name ?: context.getString(R.string.widget_single_missing_short)
                     )
                     setFloat(R.id.tvName, "setTextSize", (shortSide / 4.2f).coerceIn(12f, 28f))
+                    setTextColor(R.id.tvName, onBg)
                     // 进行中：右上角小红录制点
                     if (ongoing != null) {
                         setViewVisibility(R.id.dotRecording, View.VISIBLE)
@@ -109,6 +114,9 @@ class WidgetSingleProvider : AppWidgetProvider() {
                     )
                     setTextViewText(R.id.tvInfo, infoText ?: "")
                     setFloat(R.id.tvName, "setTextSize", (h / 2.6f).coerceIn(12f, 18f))
+                    setTextColor(R.id.tvName, onBg)
+                    setTextColor(R.id.tvInfo, withAlpha(onBg, 0xE6))
+                    setTextColor(R.id.ivIcon, withAlpha(onBg, 0xCC))
                     // 3×1 及以上（≥150dp）空间充裕，保留图标
                     setViewVisibility(R.id.ivIcon, if (w >= 150) View.VISIBLE else View.GONE)
                 }
@@ -121,6 +129,10 @@ class WidgetSingleProvider : AppWidgetProvider() {
                     )
                     setTextViewText(R.id.tvInfo, infoText ?: "")
                     setFloat(R.id.tvName, "setTextSize", if (shortSide >= 180) 24f else 20f)
+                    setTextColor(R.id.tvName, onBg)
+                    setTextColor(R.id.tvInfo, withAlpha(onBg, 0xE6))
+                    setTextColor(R.id.tvCount, withAlpha(onBg, 0xCC))
+                    setTextColor(R.id.tvHint, withAlpha(onBg, 0xB3))
 
                     // 高度够才放「累计次数」与「点击记录」提示，2×2 时保持干净
                     val roomy = h >= 150
@@ -164,6 +176,16 @@ class WidgetSingleProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.rowRoot, pi)
+            // 整块可点但没有任何文字标签时，读屏软件只会念"按钮"：
+            // 给一句「喝水，点击记录一次」（评审 A-1）。
+            // ⚠️ setContentDescription 走的是文字通道，不涉及共享 drawable，多实例安全。
+            views.setContentDescription(
+                R.id.rowRoot,
+                context.getString(
+                    R.string.cd_widget_single,
+                    event?.name ?: context.getString(R.string.widget_single_missing)
+                )
+            )
             return views
         }
     }

@@ -24,7 +24,7 @@
     <string name="dialog_add_event_title">新建事件</string>
     <string name="dialog_edit_event_title">编辑事件</string>
     <string name="event_name_hint">事件名称（如：喝水、吃药、打卡）</string>
-    <string name="event_color_label">选择颜色</string>
+    <string name="event_color_label">选择颜色（第一个「＋」可自定义）</string>
     <string name="event_type_label">记录方式</string>
     <string name="event_type_point">点时刻</string>
     <string name="event_type_interval">时间段</string>
@@ -44,6 +44,11 @@
     <string name="stats_longest_duration">最长一次</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
+    <!-- 强调"就用这个"的场景（取色器等即时生效的确认），与「保存」区分 -->
+    <string name="confirm">确定</string>
+    <string name="custom_color_title">自定义颜色</string>
+    <string name="cd_color_sv_panel">饱和度与明度面板：左右调整饱和度，上下调整明度</string>
+    <string name="cd_color_hue_bar">色相条：左右滑动选择颜色</string>
     <string name="delete">删除</string>
 
     <string name="delete_event_title">删除事件？</string>
@@ -245,4 +250,80 @@
     <string name="timeline_hours_minutes_ago">%1$d 小时 %2$d 分钟前</string>
     <string name="timeline_days_ago">%1$d 天前</string>
     <string name="timeline_open_detail">查看该事件</string>
+
+    <!-- ══════════ 通用无障碍 / 交互标签 ══════════ -->
+    <string name="action_back">返回</string>
+
+    <!-- ══════════ 自定义小组件配置页（原为布局内硬编码文案 + 框架 Button） ══════════ -->
+    <string name="widget_cfg_title_label">小组件标题</string>
+    <string name="widget_cfg_title_body">显示在小组件顶部的一行字，留空则用事件名</string>
+    <string name="widget_cfg_bg_body">不选图片时使用该底色；选图片后底色仍作为图片加载前的兜底</string>
+    <string name="widget_cfg_bg_label">背景颜色</string>
+    <string name="widget_cfg_preview_desc">背景预览</string>
+    <string name="widget_cfg_pick_image">选图做背景</string>
+    <string name="widget_cfg_clear_image">去掉图片</string>
+    <string name="widget_cfg_events_label">显示哪些事件</string>
+    <string name="widget_cfg_events_hint">至少勾选一个；桌面小组件按勾选顺序展示</string>
+    <string name="widget_cfg_select_all">全选</string>
+    <string name="widget_cfg_clear_all">清空</string>
+    <string name="widget_cfg_save">完成</string>
+    <string name="widget_cfg_image_set">已设置背景图</string>
+    <string name="widget_cfg_image_failed">图片读取失败</string>
+    <string name="widget_cfg_image_cleared">已去掉背景图</string>
+    <string name="widget_cfg_pick_one">请至少勾选一个事件</string>
+    <string name="widget_default_title">我的小组件</string>
+    <string name="widget_cfg_bg_custom">自定义颜色</string>
+    <!-- 与 WidgetCustomConfigureActivity.bgOptions 顺序一一对应（6 个预设背景色） -->
+    <string-array name="widget_bg_color_names">
+        <item>深灰蓝</item>
+        <item>纯黑</item>
+        <item>蓝</item>
+        <item>绿</item>
+        <item>玫粉</item>
+        <item>橙</item>
+    </string-array>
+
+    <!-- ══════════ 色板名称（供 TalkBack 播报「颜色 红，已选中」）══════════ -->
+    <string-array name="event_color_names">
+        <item>红</item>
+        <item>橙</item>
+        <item>琥珀</item>
+        <item>绿</item>
+        <item>青绿</item>
+        <item>青</item>
+        <item>蓝</item>
+        <item>靛</item>
+        <item>紫</item>
+        <item>粉</item>
+        <item>棕</item>
+        <item>蓝灰</item>
+        <item>深红</item>
+        <item>深橙</item>
+        <item>明黄</item>
+        <item>草绿</item>
+        <item>薄荷</item>
+        <item>亮青</item>
+        <item>浅蓝</item>
+        <item>浅靛</item>
+        <item>浅紫</item>
+        <item>玫粉</item>
+        <item>浅棕</item>
+    </string-array>
+    <string name="cd_color_option">颜色 %1$s</string>
+    <string name="cd_color_custom">自定义颜色，点击打开取色器</string>
+    <string name="cd_color_custom_selected">自定义颜色，已选中，点击可重新取色</string>
+    <string name="cd_color_option_selected">颜色 %1$s，已选中</string>
+    <string name="cd_dev_card">开发者 %1$s，点击打开 GitHub 主页</string>
+    <string name="cd_event_dot">事件颜色标记（纯装饰）</string>
+
+    <!-- ══════════ 图表无障碍摘要（Canvas 自绘，读屏软件读不到，必须给一句话摘要）══════════ -->
+    <string name="cd_chart_events">各事件记录数：最多的是 %1$s，共 %2$d 条；合计 %3$d 个事件</string>
+    <string name="cd_chart_events_empty">各事件记录数：暂无数据</string>
+    <string name="cd_chart_days">近 %1$d 天记录趋势：共 %2$d 条，单日最高 %3$d 条</string>
+    <string name="cd_chart_days_empty">近 %1$d 天记录趋势：暂无数据</string>
+
+    <!-- ══════════ 小组件无障碍描述 ══════════ -->
+    <string name="cd_widget_single">%1$s，点击记录一次</string>
+    <string name="cd_widget_custom">自定义小组件：%1$s</string>
+    <string name="cd_widget_bg_chip">背景色 %1$s</string>
 </resources>

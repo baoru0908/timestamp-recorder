@@ -26,7 +26,8 @@
             android:id="@+id/viewDot"
             android:layout_width="12dp"
             android:layout_height="12dp"
-            android:background="@drawable/bg_color_dot" />
+            android:background="@drawable/bg_color_dot"
+            android:importantForAccessibility="no" />
 
         <TextView
             android:id="@+id/tvName"

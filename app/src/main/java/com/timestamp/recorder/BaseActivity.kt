@@ -43,6 +43,8 @@ abstract class BaseActivity : AppCompatActivity() {
         supportActionBar?.title = getString(titleRes)
         if (showBack) {
             toolbar.setNavigationIcon(R.drawable.ic_back)
+            // 返回键是纯图标按钮：必须给无障碍标签，否则读屏软件只播报"按钮"
+            toolbar.navigationContentDescription = getString(R.string.action_back)
             toolbar.setNavigationOnClickListener { finish() }
         } else {
             toolbar.navigationIcon = null
@@ -64,13 +66,13 @@ abstract class BaseActivity : AppCompatActivity() {
         //   （各页滚动容器都带 clipToPadding=false）。
         // - 没有时退回保守做法：根布局吃导航栏内边距，内容不铺到手势条下，但也不会被遮住。
         // 所有分支都「值变了才写」，避免在 inset 回调里反复 requestLayout 引起布局死循环。
+        scrollHost = scrollContent
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-            val sc = scrollContent
-            if (sc != null) {
-                if (scrollBaseBottom < 0) scrollBaseBottom = sc.paddingBottom
-                val want = scrollBaseBottom + nav
-                if (sc.paddingBottom != want) sc.updatePadding(bottom = want)
+            navInsetBottom = nav
+            if (scrollHost != null) {
+                // 底部留白的唯一计算点（base + extra + nav），页面不碰绝对值
+                syncScrollBottomPadding()
                 if (v.paddingTop != 0 || v.paddingBottom != 0) v.setPadding(0, 0, 0, 0)
             } else {
                 if (v.paddingTop != 0 || v.paddingBottom != nav) v.setPadding(0, 0, 0, nav)
@@ -82,8 +84,68 @@ abstract class BaseActivity : AppCompatActivity() {
         Fonts.applyTo(root)
     }
 
+    /** 本页的滚动容器（由 [setupChrome] 记下，作为底部留白的唯一宿主） */
+    private var scrollHost: View? = null
     /** 滚动容器最初的底部留白（-1 = 尚未采样） */
     private var scrollBaseBottom = -1
+    /** 页面临时需要的额外底部让位（如批量操作栏浮出） */
+    private var scrollExtraBottom = 0
+    /** 最近一次拿到的导航栏 inset */
+    private var navInsetBottom = 0
+
+    /**
+     * 底部让位的**唯一计算点**：base（页面自带留白）+ extra（页面临时声明）+ nav（导航栏 inset）。
+     *
+     * ⚠️ 为什么必须集中在这里：曾经页面自己 `updatePadding(bottom = 140)` 直接覆盖绝对值，
+     * 退出批量管理时又把 padding 设回 24（还是**裸像素**，≈6dp）—— 结果导航栏 inset 被一起冲掉，
+     * 列表最后一条永久停在系统手势条下面、点不到「复制」（2026-09-21 设计评审 I-2 真机实证）。
+     * 现在页面只允许声明"额外需要多少"，绝对值由这里统一算。
+     */
+    private fun syncScrollBottomPadding() {
+        val sc = scrollHost ?: return
+        if (scrollBaseBottom < 0) scrollBaseBottom = sc.paddingBottom
+        val want = scrollBaseBottom + scrollExtraBottom + navInsetBottom
+        if (sc.paddingBottom != want) sc.updatePadding(bottom = want)
+    }
+
+    /**
+     * 页面声明「额外需要让出多少底部空间」（例如批量操作栏浮出时传 clearance 高度）。
+     * 传 0 即恢复基础留白。**不要**再自己调 updatePadding(bottom = ...)，否则会丢掉导航栏 inset。
+     */
+    protected fun setScrollExtraBottomPadding(extra: Int) {
+        if (scrollExtraBottom == extra) return
+        scrollExtraBottom = extra
+        // 采样基准：页面可能在 inset 到达前就调用（onCreate 里），此时 paddingBottom 仍是 XML 值
+        if (scrollBaseBottom < 0) scrollBaseBottom = scrollHost?.paddingBottom ?: 0
+        syncScrollBottomPadding()
+    }
+
+    /**
+     * 大屏内容列居中（平板 / 折叠屏展开 / 横屏）：把「屏宽 − content_max_width」的一半
+     * 补成左右内边距，于是内容自然收成居中的一列，行宽不再被拉长到 800dp+。
+     *
+     * - `content_max_width = 0`（手机，见 values/dimens.xml）时本方法是**空操作** ——
+     *   手机观感与改动前逐像素一致；
+     * - sw600dp 下为 640dp（见 values-sw600dp/dimens.xml）；
+     * - 用运行时偏移而不是复制一套 layout-sw600dp，是为了让布局保持**单一事实源**：
+     *   以后改一次布局，手机与大屏同时生效。
+     *
+     * @param view 需要居中的内容容器（RecyclerView / NestedScrollView 里的内容列）
+     * @param baseHorizontalPadding 该容器在手机上的基准左右留白（px）
+     */
+    protected fun centerContentColumn(view: View, baseHorizontalPadding: Int) {
+        val maxWidth = resources.getDimensionPixelSize(R.dimen.content_max_width)
+        if (maxWidth <= 0) return
+        val apply = Runnable {
+            val extra = ((view.width - maxWidth) / 2).coerceAtLeast(0)
+            val want = baseHorizontalPadding + extra
+            if (view.paddingLeft != want || view.paddingRight != want) {
+                view.setPadding(want, view.paddingTop, want, view.paddingBottom)
+            }
+        }
+        view.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply.run() }
+        view.post(apply)
+    }
 
     /**
      * 二级页面统一的液态玻璃顶栏（与主页同源，风格统一）。
@@ -116,29 +178,30 @@ abstract class BaseActivity : AppCompatActivity() {
                 if (content.paddingTop != want) content.updatePadding(top = want)
             }
         })
+        // 顶栏的"确定的底"：无论玻璃可不可用，AppBar 都有一层实→半→全透的遮罩，
+        // 保证标题行在任何滚动位置都压得住下面的内容（评审 V-1；API<33 时它就是唯一的底，见 I-3）
+        appBar.setBackgroundResource(R.drawable.bg_top_scrim)
+
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             try {
-                topGlass.bind(content as android.view.ViewGroup)
-                val d = resources.displayMetrics.density
-                topGlass.setCornerRadius(0f)
-                topGlass.setBlurRadius((14f * d).coerceAtMost(50f))
-                topGlass.setRefractionHeight(16f * d)
-                val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                        Configuration.UI_MODE_NIGHT_YES
-                if (night) {
-                    topGlass.setTintColorRed(0.12f)
-                    topGlass.setTintColorGreen(0.12f)
-                    topGlass.setTintColorBlue(0.18f)
-                    topGlass.setTintAlpha(0.38f)
-                } else {
-                    topGlass.setTintColorRed(1f)
-                    topGlass.setTintColorGreen(1f)
-                    topGlass.setTintColorBlue(1f)
-                    topGlass.setTintAlpha(0.12f)
-                }
+                // 玻璃参数（模糊 / 折射 / 着色）统一由 Glass 装配。
+                // 二级页顶栏用 solid = true（近黑 + 72% 厚膜，配上面那层遮罩把标题钉死）；
+                // 主页不传 solid —— 那里要的是薄玻璃的液态观感（见 MainActivity）。
+                Glass.apply(
+                    view = topGlass,
+                    context = this,
+                    content = content as android.view.ViewGroup,
+                    cornerRadiusDp = 0f,
+                    refractionRes = R.dimen.glass_refraction_top,
+                    solid = true
+                )
             } catch (_: Throwable) { }
         } else {
+            // API < 33：液态玻璃不可用 → 退回「普通玻璃」（比上面那层遮罩更实：平铺 + 下沿分隔线）。
+            // ⚠️ 必须真的给一层底：AppBar 自己的背景是 transparent，若这里只把玻璃藏掉，
+            //    顶栏就变成完全透明，滚动时列表内容会从标题下面穿过、与标题文字重叠（评审 I-3）。
             topGlass.visibility = android.view.View.GONE
+            appBar.setBackgroundResource(R.drawable.bg_top_fallback)
         }
     }
 

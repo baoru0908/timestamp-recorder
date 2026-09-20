@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 玻璃菜单里的一行：图标 + 文字。整行可点，水波纹用 14dp 圆角。 -->
+<!-- 玻璃菜单里的一行：图标 + 文字。整行可点，水波纹用 14dp 圆角。
+     行高 48dp：玻璃菜单是通用组件（⋮ 与长按都用），触摸目标必须达标。
+     图标唯一的着色点是 GlassMenu.bindRow（危险项会换成 colorError）。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rowRoot"
     android:layout_width="match_parent"
-    android:layout_height="46dp"
+    android:layout_height="48dp"
     android:background="@drawable/bg_overflow_row"
     android:gravity="center_vertical"
     android:orientation="horizontal"

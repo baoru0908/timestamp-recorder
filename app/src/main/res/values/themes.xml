@@ -21,9 +21,26 @@
         <item name="android:windowBackground">@drawable/bg_main_gradient</item>
     </style>
 
+    <!-- 所有确认类弹窗（删除 / 清空 / 导入 / 指引）共用的主题叠加：
+         把面染成 App 的玻璃色、圆角统一到 24dp —— 系统默认的 surface 是中性灰白，
+         与本 App 的玻璃卡片不是一个色调。
+         用法：MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_Timestamp_Dialog) -->
+    <style name="ThemeOverlay.Timestamp.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/glass_dialog</item>
+        <item name="colorSurfaceContainerHigh">@color/glass_dialog</item>
+        <!-- 圆角沿用 M3 默认的 28dp（shapeAppearanceCornerExtraLarge）：
+             它和 App 的 radius_xl=24dp 是同一档观感，没必要再自定义一个 ShapeAppearance
+             （自定义后 AAPT 会把 @style 引用判成裸字符串，见 2026-09-21 的链接报错）。 -->
+    </style>
+
     <!-- 「⋮」玻璃菜单浮窗专用：floating + 透明背景（菜单自己的 bg_overflow_menu 提供观感），
          无 dim、无窗口动画。浮窗会夺状态栏 appearance —— 菜单为临时浮层，可接受。 -->
-    <style name="Theme.Timestamp.Dialog" parent="Theme.Material3.DayNight.NoActionBar">
+    <!-- ⚠️ 父主题必须是 App 自己的 Theme.Timestamp，不能直接挂 Theme.Material3.DayNight.*：
+         M3 的 DayNight 是靠 values-night 里换父主题实现的，而本工程没有覆盖它 →
+         实测 `Theme.Material3.DayNight.Dialog.Alert` 在夜间模式下仍然解析成 **Light**，
+         于是出现"白色对话框 + 夜间浅色文字"（文字直接看不见，2026-09-21 取色器踩到）。
+         继承 Theme.Timestamp 后，窗口与其中所有 View 共用同一份 night 颜色，不会再打架。 -->
+    <style name="Theme.Timestamp.Dialog" parent="Theme.Timestamp">
         <item name="android:windowIsFloating">true</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

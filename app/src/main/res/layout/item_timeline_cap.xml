@@ -15,7 +15,8 @@
             android:id="@+id/vLine"
             android:layout_width="2dp"
             android:layout_height="match_parent"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+            android:importantForAccessibility="no" />
     </FrameLayout>
 
     <!-- 占位：让右侧宽度与记录行一致（保持竖线的横向位置不变） -->

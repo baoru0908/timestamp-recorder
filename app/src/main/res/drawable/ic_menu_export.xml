@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 导出（上传）（GlassMenu 会在代码里按"普通/危险"覆盖 tint，这里的 tint 只是默认值） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9,16h6v-6h4l-7,-7 -7,7h4zM5,18h14v2H5z" />
+</vector>

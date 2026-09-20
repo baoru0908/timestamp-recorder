@@ -2,6 +2,7 @@
 .gradle/
 build/
 build_log.txt
+release_log.txt
 captures/
 .externalNativeBuild/
 .cxx/
@@ -36,4 +37,3 @@ _*.png
 # 交接文档：含签名密码等敏感信息，仅本机留存、不上传，
 # 但开发过程中会持续更新，供后续接手者阅读
 DEVELOPMENT.md
-*.png\nw*.txt

@@ -20,6 +20,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -34,9 +35,7 @@ import com.timestamp.recorder.databinding.ViewPageTimelineBinding
 import com.timestamp.recorder.databinding.ItemEventBinding
 import com.timestamp.recorder.databinding.ItemTimelineCapBinding
 import com.timestamp.recorder.databinding.ItemTimelineMonthBinding
-import com.timestamp.recorder.databinding.ItemOverflowRowBinding
 import com.timestamp.recorder.databinding.ItemTimelineRecordBinding
-import com.timestamp.recorder.databinding.ViewOverflowMenuBinding
 import java.util.Calendar
 import java.util.Collections
 import java.util.Locale
@@ -67,6 +66,9 @@ class MainActivity : BaseActivity() {
         private const val MENU_SETTINGS = 1
         private const val MENU_STATS = 2
         private const val MENU_TUTORIAL = 3
+        /** 事件卡 ⋮ / 长按选单的动作 id（不走 handleMenuAction，由 showEventMenu 自己消化） */
+        private const val MENU_EVENT_EDIT = 11
+        private const val MENU_EVENT_DELETE = 12
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -101,6 +103,8 @@ class MainActivity : BaseActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setupChrome(binding.toolbar, binding.appBar, binding.root, R.string.main_title, showBack = false)
+        // 返回键交给菜单回调统一裁决（见 menuBackCallback）
+        onBackPressedDispatcher.addCallback(this, menuBackCallback)
         repo = EventRepository(this)
 
         // 两个页面（事件 / 时间线）各自 inflate，交给 ViewPager2 做跟手横滑
@@ -119,9 +123,16 @@ class MainActivity : BaseActivity() {
         pageEvents.recyclerEvents.layoutManager = LinearLayoutManager(this)
         pageEvents.recyclerEvents.adapter = adapter
         touchHelper.attachToRecyclerView(pageEvents.recyclerEvents)
+        setupListAnimators()
 
         pageTimeline.recyclerTimeline.layoutManager = LinearLayoutManager(this)
         pageTimeline.recyclerTimeline.adapter = timelineAdapter
+
+        // 大屏内容列居中（手机上是空操作，见 BaseActivity.centerContentColumn）：
+        // 平板 / 折叠屏展开 / 横屏下把两个列表收成居中的一列，行宽不再被拉长到 800dp+
+        val listPad = resources.getDimensionPixelSize(R.dimen.list_horizontal_padding)
+        centerContentColumn(pageEvents.recyclerEvents, listPad)
+        centerContentColumn(pageTimeline.recyclerTimeline, listPad)
 
         binding.fabAdd.setOnClickListener { showEditDialog(null) }
         // 记下布局里原本的留白：顶部玻璃栏开启 / 关闭时要来回切换
@@ -194,41 +205,36 @@ class MainActivity : BaseActivity() {
      *  （MIT, API33+）：每帧把 mainHost 内容录进 RenderNode，AGSL 折射 + 色散 + GPU 高斯
      *  —— 同窗口捕获不建浮窗，黑化不受影响；API<33 时透明（4.0.0 统一降级）。 */
     private fun setupInLayoutGlass() {
-        val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                Configuration.UI_MODE_NIGHT_YES
-        val d = resources.displayMetrics.density
+        // ⚠️ 主页**不加** bg_top_scrim：这里的顶部玻璃栏与胶囊岛是液态玻璃的设计语言本体，
+        //    要的就是"内容从玻璃底下透出来"的观感。二级页才用遮罩兜标题（见 BaseActivity）。
+        //    （若这里挂遮罩，顶部玻璃栏会退化成一条实心色块 —— 2026-09-21 主人反馈的回归。）
 
         if (Build.VERSION.SDK_INT >= 33) {
             try {
+                // 玻璃参数（模糊 / 折射 / 着色）统一由 Glass 装配，深浅色差异来自 res/values-night。
                 // 底部胶囊岛：完整胶囊圆角 28dp
-                binding.bottomBar.bind(binding.mainHost)
-                binding.bottomBar.setCornerRadius(28f * d)
-                binding.bottomBar.setBlurRadius((14f * d).coerceAtMost(50f))
-                binding.bottomBar.setRefractionHeight(20f * d)
-                // 顶部额头：贴屏幕顶的玻璃条，不做圆角（液态玻璃自带边缘光效），
-                // 折射高度稍收（列表从底下穿过，折射带太宽会顶到标题）
-                binding.topGlass.bind(binding.mainHost)
-                binding.topGlass.setCornerRadius(0f)
-                binding.topGlass.setBlurRadius((14f * d).coerceAtMost(50f))
-                binding.topGlass.setRefractionHeight(16f * d)
-                // tab 栏中间的加号玻璃圆钮：与岛同材质，风格统一
-                binding.fabGlass.bind(binding.mainHost)
-                binding.fabGlass.setCornerRadius(26f * d)
-                binding.fabGlass.setBlurRadius((12f * d).coerceAtMost(50f))
-                binding.fabGlass.setRefractionHeight(12f * d)
-                // 色调：浅色模式薄白雾、深色模式深蓝黑雾
-                val (tr, tg, tb, ta) = if (night) {
-                    listOf(0.12f, 0.12f, 0.18f, 0.38f)
-                } else {
-                    listOf(1f, 1f, 1f, 0.12f)
-                }
-                for (v in listOf(binding.bottomBar, binding.topGlass)) {
-                    v.setTintColorRed(tr)
-                    v.setTintColorGreen(tg)
-                    v.setTintColorBlue(tb)
-                    v.setTintAlpha(ta)
-                }
+                Glass.apply(
+                    binding.bottomBar, this, binding.mainHost,
+                    28f, R.dimen.glass_refraction_island
+                )
+                // 顶部额头：贴屏幕顶的玻璃条，不做圆角（液态玻璃自带边缘光效）。
+                // 深色模式下折射带更窄、着色调成近黑 —— 否则下方列表会被折射上来与标题叠字。
+                Glass.apply(
+                    binding.topGlass, this, binding.mainHost,
+                    0f, R.dimen.glass_refraction_top
+                )
+                // tab 栏中间的加号玻璃圆钮：不上色（tintAlphaOverride = 0f），只保留折射 + 模糊，
+                // 小圆形按钮涂满近黑会丢掉玻璃质感
+                Glass.apply(
+                    binding.fabGlass, this, binding.mainHost,
+                    26f, R.dimen.glass_refraction_fab, tintAlphaOverride = 0f
+                )
             } catch (_: Throwable) { }
+        } else {
+            // API < 33：液态玻璃不可用，必须给顶栏一层"普通玻璃"的底，
+            // 否则顶栏退化为全透明、标题与滚动内容重叠（评审 I-3）
+            binding.topGlass.visibility = View.GONE
+            binding.appBar.setBackgroundResource(R.drawable.bg_top_fallback)
         }
 
         // 顶部玻璃高度匹配 AppBar（含状态栏区域）。
@@ -327,14 +333,13 @@ class MainActivity : BaseActivity() {
      * 滚动时内容就从玻璃栏底下穿过去。
      *
      * 附带影响：右上角「⋮」（设置 / 统计 / 教程）跟着搬进这个窗口 —— 菜单本身也是一扇
-     * 独立的玻璃窗口（见 [showOverflowMenu]），动作仍走 [handleMenuAction]，
-     * 与原来的 options menu 共用一套逻辑。
+     * 独立的玻璃窗口（见 [toggleOverflowMenu] / [GlassMenu]），动作仍走 [handleMenuAction]。
      */
     private fun syncTopBar() {
         // 液态玻璃统一形态：布局内 AppBar + topGlass（玻璃配置见 setupInLayoutGlass）
         binding.appBar.visibility = View.VISIBLE
         binding.topGlass.visibility = View.VISIBLE
-        binding.btnMore.setOnClickListener { showOverflowMenu(it) }
+        binding.btnMore.setOnClickListener { toggleOverflowMenu(it) }
         restoreTopPadding()
     }
 
@@ -381,109 +386,56 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * 右上角「⋮」的菜单。
+     * 主页右上角「⋮」：设置 / 统计 / 使用教程。
      *
-     * ⚠️ 刻意**不用**系统 PopupMenu：
-     * 1. 它的位置是按「锚点所在窗口」推算的，而这里的锚点在一扇 NO_LIMITS 的独立窗口里 ——
-     *    实测菜单会整个甩到屏幕外面去；
-     * 2. 系统那套白底 / 直角 / 无图标的样式，跟我们这套玻璃语言根本不是一个东西。
-     *
-     * 所以自己来：一块同样跑在**独立窗口**里的玻璃卡片（模糊照样交给系统合成器，App 端零开销），
-     * 位置按「按钮在屏幕上的真实坐标」算并**夹在屏幕内**，从按钮那一角缩放淡入。
-     * 动作仍走 [handleMenuAction]，和 options menu 共用一套逻辑。
+     * ⚠️ 这里走 [GlassMenu.toggle] 而不是 show —— **同一个「⋮」再点一次就是收起**，
+     * 且收起是展开动画的时间反演（同 pivot、同时长 190ms、缓动 Decelerate↔Accelerate）。
+     * 菜单样式规范表见 GlassMenu 的类注释。
      */
-    private fun showOverflowMenu(anchor: View) {
-        dismissOverflowMenu()
-        val dlg = android.app.Dialog(this, R.style.Theme_Timestamp_Dialog)
-        val b = ViewOverflowMenuBinding.inflate(layoutInflater)
-        dlg.setContentView(b.root)
-        dlg.setCancelable(true)
-        dlg.setCanceledOnTouchOutside(true)
-        dlg.setOnDismissListener { tintMenuAnchor(anchor, false) }
-
-        bindMenuRow(b.rowSettings, R.drawable.ic_menu_settings, R.string.menu_settings, MENU_SETTINGS)
-        bindMenuRow(b.rowStats, R.drawable.ic_menu_stats, R.string.menu_stats, MENU_STATS)
-        bindMenuRow(b.rowTutorial, R.drawable.ic_menu_tutorial, R.string.menu_tutorial, MENU_TUTORIAL)
-
-        // 位置：右边缘贴着按钮、整体夹在屏幕内（8dp 安全边距），绝不顶出画面
-        val m = resources.getDimensionPixelSize(R.dimen.space_2)
-        val menuW = resources.getDimensionPixelSize(R.dimen.overflow_menu_width)
-        val maxX = (resources.displayMetrics.widthPixels - menuW - m).coerceAtLeast(m)
-        val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
-        val x = (loc[0] + anchor.width - menuW + m).coerceIn(m, maxX)
-        // 上沿就贴在「⋮」下沿下面 6dp —— 视觉上是从按钮里长出来的（缩放原点也在右上角）。
-        // 之前挂在「玻璃栏下沿」，中间还隔着一行副标题的落差，看着就远了；
-        // 现在 ⋮ 垂直居中于整块栏，它的下沿离栏底只剩几 dp，所以直接锚按钮就又近又不压字。
-        val y = (loc[1] + anchor.height +
-                resources.getDimensionPixelSize(R.dimen.overflow_menu_gap)).coerceAtLeast(m)
-
-        dlg.window?.let { w ->
-            w.setDimAmount(0f)
-            w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            // 不吃焦点、不拦窗口外的触摸；WATCH_OUTSIDE_TOUCH 让「点空白处」也能收起菜单
-            // ⚠️ LAYOUT_IN_SCREEN 不能少：少了它，窗口被限制在「应用可用区」里，
-            //    于是 lp.y 被当成「内容区坐标」—— 设 y=365，实际却被摆到 534
-            //    （正好多一条 169px 的状态栏），菜单就凭空往下掉了一截。
-            //    顶部玻璃栏那扇窗一直有这个 flag，所以只有菜单踩到。
-            w.addFlags(
-                android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                    or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                    or android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-                    or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                    or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            )
-            // 模糊区域由「窗口背景」推导，所以这块可见的玻璃必须给到窗口上（内容本身不带背景）
-            val bg = resources.getDrawable(R.drawable.bg_overflow_menu, theme)
-            w.setBackgroundDrawable(bg)
-            w.setGravity(Gravity.TOP or Gravity.START)
-            val lp = w.attributes
-            // ⚠️ 宽度必须显式给像素，不能靠布局里的 layout_width：
-            //    `Dialog.setContentView(View)` 会把这个 View 挂到 decor 的 FrameLayout 下，
-            //    LinearLayout 的 LayoutParams 不兼容 → 被换成 wrap_content，188dp 直接失效
-            //    （实测菜单只有 144dp 宽）。
-            lp.width = menuW
-            lp.height = android.view.WindowManager.LayoutParams.WRAP_CONTENT
-            lp.x = x
-            lp.y = y
-            // ⚠️ 和顶部玻璃栏同一个坑：浮动窗口默认会按状态栏再内缩一次 ——
-            //    设了 y=365，实际 frame 却被推到 534（差的正是 169px 状态栏高度），
-            //    于是菜单凭空往下掉了一整条状态栏，看着就跟按钮"离得太远"。
-            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                lp.fitInsetsTypes = 0
-                lp.fitInsetsSides = 0
-            }
-            w.attributes = lp
-        }
-
-        // 从右上角那颗按钮的方向展开（宽度已知，不必等测量）
-        b.root.pivotX = menuW.toFloat()
-        b.root.pivotY = 0f
-        b.root.alpha = 0f
-        b.root.scaleX = 0.88f
-        b.root.scaleY = 0.88f
-        dlg.show()
-        b.root.animate().alpha(1f).scaleX(1f).scaleY(1f)
-            .setDuration(190L)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
-
-        overflowDialog = dlg
-        tintMenuAnchor(anchor, true)
+    private fun toggleOverflowMenu(anchor: View) {
+        val handle = GlassMenu.toggle(
+            activity = this,
+            anchor = anchor,
+            items = listOf(
+                GlassMenu.Item(R.drawable.ic_menu_settings, R.string.menu_settings, MENU_SETTINGS),
+                GlassMenu.Item(R.drawable.ic_menu_stats, R.string.menu_stats, MENU_STATS),
+                GlassMenu.Item(R.drawable.ic_menu_tutorial, R.string.menu_tutorial, MENU_TUTORIAL)
+            ),
+            onDismiss = { tintMenuAnchor(anchor, false) }
+        ) { action -> handleMenuAction(action) }
+        // 点亮状态跟着菜单的真实状态走：再次点击（此时已在收起）会**立刻**把「⋮」的亮色撤掉，
+        // 点下去就有反馈，不必等 190ms 退场动画播完才"灭灯"
+        tintMenuAnchor(anchor, handle.isOpen)
     }
 
-    private fun bindMenuRow(
-        row: ItemOverflowRowBinding,
-        icon: Int,
-        label: Int,
-        action: Int
-    ) {
-        row.rowIcon.setImageResource(icon)
-        row.rowText.setText(label)
-        row.rowRoot.setOnClickListener {
-            dismissOverflowMenu()
-            handleMenuAction(action)
+    /**
+     * 事件卡的「⋮」与**长按卡片**共用的选单：编辑事件 / 删除事件。
+     * 删除是破坏性动作 → GlassMenu 用 `colorError` 着色 + 图标垫一层淡红底，和编辑拉开距离。
+     *
+     * @param longPress true = 长按呼出。长按的语义是"打开这个菜单"而不是"开关"，
+     *                  所以即使菜单已开着也保持展开（见 GlassMenu.open）
+     */
+    private fun showEventMenu(anchor: View, event: TimestampEvent, longPress: Boolean = false) {
+        val items = listOf(
+            GlassMenu.Item(R.drawable.ic_menu_edit, R.string.menu_edit_event, MENU_EVENT_EDIT),
+            GlassMenu.Item(
+                R.drawable.ic_menu_delete, R.string.menu_delete_event,
+                MENU_EVENT_DELETE, destructive = true
+            )
+        )
+        val onAction: (Int) -> Unit = { action ->
+            when (action) {
+                MENU_EVENT_EDIT -> showEditDialog(event)
+                MENU_EVENT_DELETE -> confirmDeleteEvent(event)
+            }
         }
+        val onDismiss = { tintMenuAnchor(anchor, false) }
+        val handle = if (longPress) {
+            GlassMenu.open(this, anchor, items, onDismiss, onAction)
+        } else {
+            GlassMenu.toggle(this, anchor, items, onDismiss, onAction)
+        }
+        tintMenuAnchor(anchor, handle.isOpen)
     }
 
     /** 菜单展开时把「⋮」点亮（主题色），收起后回到常规颜色 —— 让人知道菜单是从哪冒出来的 */
@@ -492,12 +444,21 @@ class MainActivity : BaseActivity() {
             ColorStateList.valueOf(if (open) menuAccent else menuIconTint)
     }
 
-    private fun dismissOverflowMenu() {
-        overflowDialog?.dismiss()
-        overflowDialog = null
+    /**
+     * 菜单开着时，**返回键先收菜单**（走同一套退场动画），而不是直接把页面退掉。
+     *
+     * 玻璃菜单的窗口是 `FLAG_NOT_FOCUSABLE` 的（不吃焦点，否则会把下方页面的触摸全挡住），
+     * 按键根本到不了那个窗口 —— 不接管的话，菜单明明开着、一按返回却退出页面，很不直觉。
+     */
+    private val menuBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (GlassMenu.closeAnimated(this@MainActivity)) return
+            // 没有菜单在开 → 临时让开，交回系统默认的返回行为
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
+        }
     }
-
-    private var overflowDialog: android.app.Dialog? = null
 
     private val menuIconTint: Int by lazy {
         com.google.android.material.color.MaterialColors.getColor(
@@ -540,15 +501,40 @@ class MainActivity : BaseActivity() {
         navInsetPx = nav
         // 胶囊岛：高度固定，只调整「离底部多远」= 导航栏高度 + 12dp 呼吸感
         val lp = binding.bottomBar.layoutParams as android.view.ViewGroup.MarginLayoutParams
-        val want = nav + resources.getDimensionPixelSize(R.dimen.island_bottom_gap)
-        if (lp.bottomMargin != want) {
-            lp.bottomMargin = want
-            binding.bottomBar.layoutParams = lp
+        val wantMargin = nav + resources.getDimensionPixelSize(R.dimen.island_bottom_gap)
+        // 大屏（sw600dp）让岛不再横贯全屏，收成真正的"胶囊"（配合 XML 的 center_horizontal）。
+        // island_max_width = 0 表示铺满 —— 手机路径与改动前完全一致。
+        val maxW = resources.getDimensionPixelSize(R.dimen.island_max_width)
+        val wantWidth = if (maxW > 0) maxW else android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        var changed = false
+        if (lp.bottomMargin != wantMargin) {
+            lp.bottomMargin = wantMargin
+            changed = true
         }
+        if (lp.width != wantWidth) {
+            lp.width = wantWidth
+            changed = true
+        }
+        if (changed) binding.bottomBar.layoutParams = lp
         applyFabPosition()
     }
 
     private var navInsetPx = 0
+
+    /**
+     * 关闭列表的「变化」动画。
+     *
+     * RecyclerView 的 DefaultItemAnimator 在收到 `notifyItemChanged` 时会给目标项跑一次
+     * **淡出 → 淡入**（animateChange）—— 对"内容真的变了"的场景是好事，
+     * 但秒表每秒调一次就变成了肉眼可见的**闪烁**（主人 2026-09-21 反馈）。
+     *
+     * ⚠️ 只关 `supportsChangeAnimations`：**移动**动画保持开启，
+     *    否则拖拽排序松手时的落位动画会一起没了。
+     */
+    private fun setupListAnimators() {
+        (pageEvents.recyclerEvents.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)
+            ?.supportsChangeAnimations = false
+    }
 
     /** 一个 Tab 的三件套：容器（承载选中态的玻璃胶囊）、图标、文字 */
     private class TabViews(val root: View, val icon: ImageView, val text: TextView)
@@ -591,8 +577,9 @@ class MainActivity : BaseActivity() {
         repo.unregisterChangeListener(prefsListener)
         refreshHandler.removeCallbacks(pendingRefresh)
         stopTicker()
-        // 「⋮」菜单是个独立窗口，Activity 退到后台时它不会被自动收掉，这里手动关
-        dismissOverflowMenu()
+        // 「⋮」菜单是个独立窗口，Activity 退到后台时它不会被自动收掉，这里手动关。
+        // ⚠️ 用 closeNow（不播退场动画）：页面已经在退场了，再叠一层菜单动画只会显脏
+        GlassMenu.closeNow(this)
         super.onPause()
     }
 
@@ -631,7 +618,7 @@ class MainActivity : BaseActivity() {
             for (i in adapter.items.indices) {
                 val ev = adapter.items[i]
                 if (ev.isInterval && repo.ongoingInterval(ev.id) != null) {
-                    adapter.notifyItemChanged(i)
+                    adapter.tickPosition(i)
                     anyOngoing = true
                 }
             }
@@ -662,7 +649,7 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         // 独立窗口要收掉，避免窗口泄漏
-        dismissOverflowMenu()
+        GlassMenu.closeNow(this)
         super.onDestroy()
     }
 
@@ -756,6 +743,9 @@ class MainActivity : BaseActivity() {
      */
     private fun setTabLook(tab: TabViews, selected: Boolean) {
         tab.root.background = null
+        // 把选中态暴露给无障碍服务：TalkBack 会播报「事件，已选中」，
+        // 否则读屏用户只知道有两个 Tab、不知道当前在哪一个
+        tab.root.isSelected = selected
         val content = if (selected) {
             val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
                     Configuration.UI_MODE_NIGHT_YES
@@ -795,7 +785,7 @@ class MainActivity : BaseActivity() {
 
     // ---------- 菜单（设置 + 统计 + 教程；时间线走底部 Tab） ----------
     // ⚠️ 不再注册 options menu：那会在工具栏上多出一颗系统样式的「⋮」（跟自定义按钮重复，
-    //    关掉高级材质时两个 ⋮ 并排出现）。统一走 showOverflowMenu() 的玻璃菜单。
+    //    关掉高级材质时两个 ⋮ 并排出现）。统一走 toggleOverflowMenu() 的玻璃菜单。
 
     private fun refresh() {
         dragEnabled = currentSortMode() == SettingsActivity.SORT_MANUAL
@@ -847,7 +837,7 @@ class MainActivity : BaseActivity() {
         dlg.chipPoint.setOnCheckedChangeListener { _, checked -> if (checked) typeHintFor(TimestampEvent.TYPE_POINT) }
         dlg.chipInterval.setOnCheckedChangeListener { _, checked -> if (checked) typeHintFor(TimestampEvent.TYPE_INTERVAL) }
 
-        val dialog = MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(if (event == null) R.string.dialog_add_event_title else R.string.dialog_edit_event_title)
             .setView(dlg.root)
             .setNegativeButton(R.string.cancel, null)
@@ -871,21 +861,8 @@ class MainActivity : BaseActivity() {
         dialog.show()
     }
 
-    private fun showEventMenu(event: TimestampEvent) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(event.name)
-            .setItems(arrayOf(getString(R.string.menu_edit_event), getString(R.string.menu_delete_event))) { _, which ->
-                when (which) {
-                    0 -> showEditDialog(event)
-                    1 -> confirmDeleteEvent(event)
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
     private fun confirmDeleteEvent(event: TimestampEvent) {
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Timestamp_Dialog)
             .setTitle(R.string.delete_event_title)
             .setMessage(getString(R.string.delete_event_msg, event.name, repo.recordCount(event.id)))
             .setPositiveButton(R.string.delete) { _, _ ->
@@ -902,6 +879,13 @@ class MainActivity : BaseActivity() {
             .putExtra(EventDetailActivity.EXTRA_EVENT_ID, event.id))
     }
 
+    /**
+     * 秒表局部刷新的 payload 标记。用**同一个实例**做身份比较（而不是 equals），
+     * 避免和其它 payload 语义撞车。
+     * ⚠️ 放在外层类里：Kotlin 的 inner class 不允许有 companion object。
+     */
+    private val payloadTick = Any()
+
     // ---------- 事件列表适配器（支持拖拽重排） ----------
 
     private inner class EventAdapter : RecyclerView.Adapter<EventAdapter.VH>() {
@@ -912,6 +896,20 @@ class MainActivity : BaseActivity() {
             items.clear()
             items.addAll(list)
             notifyDataSetChanged()
+        }
+
+        /**
+         * 秒表读秒：只刷新「进行中」那一行的**时间文案**。
+         *
+         * ⚠️ 两个坑叠在一起会让卡片"每秒闪一下"（主人 2026-09-21 反馈）：
+         * 1. `notifyItemChanged(position)` 默认会让 RecyclerView 对目标项跑一次
+         *    **淡出→淡入**的 change 动画（DefaultItemAnimator.animateChange）；
+         * 2. 整行重绑还会把色点背景 / 快捷钮 tint 全部重建。
+         * 所以这里改成「带 payload 的局部刷新 + 关闭 change 动画」（见 setupListAnimators），
+         * 只改一个 TextView 的文案。
+         */
+        fun tickPosition(position: Int) {
+            if (position in items.indices) notifyItemChanged(position, payloadTick)
         }
 
         fun move(from: Int, to: Int) {
@@ -935,7 +933,29 @@ class MainActivity : BaseActivity() {
             holder.bind(items[position])
         }
 
+        override fun onBindViewHolder(holder: VH, position: Int, payloads: MutableList<Any>) {
+            // 只有秒表 payload 才走轻量路径；其它情况按整行重绑处理
+            if (payloads.isNotEmpty() && payloads[0] === payloadTick) {
+                holder.bindOngoingTick(items[position])
+            } else {
+                super.onBindViewHolder(holder, position, payloads)
+            }
+        }
+
         inner class VH(private val b: ItemEventBinding) : RecyclerView.ViewHolder(b.root) {
+
+            /**
+             * 秒表专用轻量绑定：**只**更新进行中那一行的时间文案。
+             * 不碰色点背景、不碰快捷钮 tint、不碰徽章 —— 这些重绑动作正是"闪一下"的来源。
+             */
+            fun bindOngoingTick(event: TimestampEvent) {
+                val ongoing = repo.ongoingInterval(event.id) ?: return
+                b.tvEventInfo.text = getString(
+                    R.string.detail_ongoing,
+                    TimeFormat.durationClock(ongoing.duration())
+                )
+            }
+
             fun bind(event: TimestampEvent) {
                 b.tvEventName.text = event.name
                 b.viewColorDot.background = GradientDrawable().apply {
@@ -975,9 +995,19 @@ class MainActivity : BaseActivity() {
                     b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
                 }
 
+                // 前景色：**默认白字**，只有底色过亮（白/明黄/琥珀这一档）才自动转近黑。
+                // 纯白事件色上的白字是 1:1（完全看不见），明黄 1.40:1 —— 必须兜住；
+                // 其余颜色一律保持白字，维持"全 App 一套白字"的一致性。
+                val onEvent = EventColors.onColor(event.color)
+                b.tvEventCount.setTextColor(onEvent)
+                b.ivPlus.imageTintList = ColorStateList.valueOf(onEvent)
+
                 b.btnQuickRecord.setOnClickListener { quickRecord(event) }
                 b.root.setOnClickListener { openDetail(event) }
-                b.btnMenu.setOnClickListener { showEventMenu(event) }
+                b.btnMenu.setOnClickListener { showEventMenu(b.btnMenu, event) }
+                // 长按整张卡 = 同一个选单（此前长按无任何反应）。
+                // 主人 2026-09-21 要求"事件长按弹出的选单"与 ⋮ 用同一套玻璃样式。
+                b.root.setOnLongClickListener { showEventMenu(b.btnMenu, event, longPress = true); true }
 
                 if (dragEnabled) {
                     b.btnDrag.visibility = View.VISIBLE

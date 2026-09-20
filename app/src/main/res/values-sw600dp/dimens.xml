@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  大屏（最小宽度 ≥ 600dp：平板 / 折叠屏展开 / 横屏平板）的尺寸覆盖。
+
+  设计意图：手机竖屏是「单列铺满」，大屏则收敛为**居中的内容列**，避免一张卡片横跨 800dp、
+  文本行宽超过可读上限。实现方式是「内容列宽度上限 + 运行时居中偏移」：
+  - content_max_width 定义一个内容列的最大宽度；
+  - BaseActivity.centerContentColumn() 把「屏宽 − 内容列宽」的一半补成左右内边距，
+    于是内容自然居中，且不需要为每个页面复制一套 layout-sw600dp 布局（单一事实源）。
+  手机（values/dimens.xml）里 content_max_width = 0 = 不限制，该助手退化为空操作，
+  所以手机观感与改动前**完全一致**。
+-->
+<resources>
+    <dimen name="content_max_width">640dp</dimen>
+
+    <!-- 大屏给一点更从容的留白（内容列本身已经居中，这里只是基准留白） -->
+    <dimen name="list_horizontal_padding">20dp</dimen>
+    <dimen name="screen_horizontal_padding">24dp</dimen>
+
+    <!-- 胶囊岛不再横贯全屏，恢复「岛」的形态（配合 applyBarLayout 里的居中处理） -->
+    <dimen name="island_max_width">360dp</dimen>
+</resources>
