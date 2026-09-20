@@ -6,6 +6,9 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
@@ -66,8 +69,11 @@ class TimestampWidgetProvider : AppWidgetProvider() {
                     if (last != null) TimeFormat.hm(last) else context.getString(R.string.widget_row_no_record)
                 )
 
-                // 彩色圆点：用 ImageView 的 colorFilter 染成事件色（可靠，跨 ROM）
-                views.setInt(DOT_IDS[i], "setColorFilter", ev.color)
+                // 彩色圆点：直接按事件色预渲染一张小圆点 Bitmap，再 setImageViewBitmap。
+                // ⚠️ 不能用「共用 bg_dot shape + setColorFilter」：资源 drawable 默认共享同一实例，
+                //    一行 setColorFilter 改的是同一份，后设的覆盖前面 → 所有圆点只剩最后一个事件的颜色（串色）。
+                //    Bitmap 每色一张、彼此独立，跨 ROM 稳定（与单事件组件的结论一致）。
+                views.setImageViewBitmap(DOT_IDS[i], coloredDot(context, ev.color))
 
                 // PendingIntent 判等只看 requestCode + action/data/class/identity，**extras 不参与**；
                 // 且 eventId 是 Long（毫秒时间戳），直接 toInt() 有截断碰撞窗口。故：
@@ -111,6 +117,27 @@ class TimestampWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widgetEmpty, openPi)
             return views
         }
+
+        /**
+         * 按事件色渲染一张圆形圆点 Bitmap（带缓存）。
+         * 圆点在布局里固定 10dp，这里按 2x 出图保证高分屏不糊。
+         * 缓存在进程内按颜色复用，一次刷新最多 6 个事件，开销可忽略。
+         */
+        private val dotCache = java.util.concurrent.ConcurrentHashMap<Int, Bitmap>()
+
+        private fun coloredDot(context: Context, color: Int): Bitmap =
+            dotCache.getOrPut(color) {
+                val d = context.resources.displayMetrics.density
+                val px = (10 * d * 2).toInt().coerceAtLeast(20)
+                val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    this.color = color
+                    style = Paint.Style.FILL
+                }
+                canvas.drawCircle(px / 2f, px / 2f, px / 2f, paint)
+                bmp
+            }
     }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {

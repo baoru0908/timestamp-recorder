@@ -79,7 +79,11 @@ class WidgetSingleConfigureActivity : BaseActivity() {
             WidgetSingleProvider.buildRemoteViews(this, widgetId)
         }
         manager.updateAppWidget(widgetId, views)
-        setResult(RESULT_OK)
+        // ⚠️ 必须把 EXTRA_APPWIDGET_ID 放进结果 Intent：带 configure 的小组件，
+        //    launcher 靠它确认「哪个 widgetId 被配置成功」。只 setResult(RESULT_OK)
+        //    不带这个 extra，launcher 视为无效 → 选完事件页面关掉、桌面什么都不出现（添加失败）。
+        val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+        setResult(RESULT_OK, resultValue)
         finish()
     }
 
