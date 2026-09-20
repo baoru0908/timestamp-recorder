@@ -75,7 +75,9 @@ class WidgetSingleProvider : AppWidgetProvider() {
                 }
                 else -> last?.let { TimeFormat.hm(it) }
             }
-            val bgColor = if (ongoing != null) 0xFFD32F2F.toInt() else (event?.color ?: MISSING_COLOR)
+            // 进行中不再整块染红（太像报错、也盖掉事件色）：背景保持事件色，
+            // 用小红点 + 文案「● 进行中」表达计时中。
+            val bgColor = event?.color ?: MISSING_COLOR
 
             val shape = shapeOf(w, h)
             val views: RemoteViews = when (shape) {
@@ -87,6 +89,13 @@ class WidgetSingleProvider : AppWidgetProvider() {
                         event?.name ?: context.getString(R.string.widget_single_missing_short)
                     )
                     setFloat(R.id.tvName, "setTextSize", (shortSide / 4.2f).coerceIn(12f, 28f))
+                    // 进行中：右上角小红录制点
+                    if (ongoing != null) {
+                        setViewVisibility(R.id.dotRecording, View.VISIBLE)
+                        setInt(R.id.dotRecording, "setColorFilter", 0xFFE53935.toInt())
+                    } else {
+                        setViewVisibility(R.id.dotRecording, View.GONE)
+                    }
                 }
 
                 // ── 宽扁（2×1 / 3×1 / 4×1）：一行放完 ──

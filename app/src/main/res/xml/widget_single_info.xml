@@ -21,6 +21,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_single"
+    android:previewLayout="@layout/widget_single"
     android:configure="com.timestamp.recorder.WidgetSingleConfigureActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"

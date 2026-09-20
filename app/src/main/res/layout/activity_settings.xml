@@ -289,6 +289,18 @@
                             android:text="@string/pin_widget_capsule" />
                     </LinearLayout>
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPinCustom"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:maxLines="1"
+                        android:textSize="13sp"
+                        android:text="@string/pin_widget_custom" />
+
                     <!-- 权限 / 设置引导（全机型显示）：部分 ROM 对「一键添加」有额外限制 ——
                          小米需要先授予「桌面快捷方式」权限（米系推荐先点一下）；
                          其他机型点这里前往系统应用设置检查。文案与跳转目标由代码按机型决定。 -->

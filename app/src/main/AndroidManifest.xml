@@ -100,6 +100,29 @@
                 android:resource="@xml/widget_capsule_info" />
         </receiver>
 
+        <!-- 桌面小组件类型四：自定义（自选事件 + 标题 + 背景色） -->
+        <activity
+            android:name=".WidgetCustomConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Timestamp"
+            android:label="@string/widget_custom_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".WidgetCustomProvider"
+            android:label="@string/widget_custom_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_custom_info" />
+        </receiver>
+
         <!-- RemoteViewsService 已移除：「全部事件」小组件改为固定行渲染，
              不再需要 ListView + 跨进程服务（该模式在 MIUI / HyperOS 上会导致
              小组件载入失败）。详见 TimestampWidgetProvider 的注释。 -->

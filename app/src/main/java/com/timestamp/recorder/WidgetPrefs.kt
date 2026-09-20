@@ -34,6 +34,50 @@ object WidgetPrefs {
             .edit().remove(singleKey(widgetId)).apply()
     }
 
+    // ── 自定义组件：custom_<widgetId> -> title / bgColor / 选中事件集合 ──
+    private fun cTitle(id: Int) = "custom_title_$id"
+    private fun cBg(id: Int) = "custom_bg_$id"
+    private fun cImage(id: Int) = "custom_image_$id"
+    private fun cEvents(id: Int) = "custom_events_$id"
+
+    const val CUSTOM_BG_DEFAULT = 0xFF2D2D3A.toInt()
+
+    fun customTitle(context: Context, widgetId: Int): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(cTitle(widgetId), "我的小组件") ?: "我的小组件"
+
+    fun customBg(context: Context, widgetId: Int): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(cBg(widgetId), CUSTOM_BG_DEFAULT)
+
+    fun customImage(context: Context, widgetId: Int): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(cImage(widgetId), "") ?: ""
+
+    fun setCustomImage(context: Context, widgetId: Int, path: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(cImage(widgetId), path).apply()
+    }
+
+    fun customEvents(context: Context, widgetId: Int): Set<Long> =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getStringSet(cEvents(widgetId), emptySet())
+            ?.mapNotNull { it.toLongOrNull() }
+            ?.toSet() ?: emptySet()
+
+    fun saveCustom(context: Context, widgetId: Int, title: String, bg: Int, events: Set<Long>) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(cTitle(widgetId), title.ifBlank { "我的小组件" })
+            .putInt(cBg(widgetId), bg)
+            .putStringSet(cEvents(widgetId), events.map { it.toString() }.toSet())
+            .apply()
+    }
+
+    fun removeCustom(context: Context, widgetId: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(cTitle(widgetId)).remove(cBg(widgetId)).remove(cEvents(widgetId)).apply()
+    }
+
     /** 圆角档位对应的按钮背景资源 */
     fun cornerRes(corner: Int): Int = when (corner) {
         8 -> R.drawable.bg_corner_r8

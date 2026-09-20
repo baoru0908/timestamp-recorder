@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.timestamp.recorder.databinding.ItemColorBinding
 
-/** 分类染色颜色选择器（事件编辑对话框共用） */
+/** 分类染色颜色选择器（事件编辑对话框共用）。 */
 class ColorAdapter(initial: Int) : RecyclerView.Adapter<ColorAdapter.VH>() {
 
     var selected: Int = initial
@@ -22,6 +22,7 @@ class ColorAdapter(initial: Int) : RecyclerView.Adapter<ColorAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val color = EventColors.palette[position]
+        holder.b.tvPlus.visibility = View.GONE
         holder.b.viewColor.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(color)

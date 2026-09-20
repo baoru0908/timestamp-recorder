@@ -31,4 +31,16 @@
         android:textStyle="bold"
         android:ellipsize="end"
         android:maxLines="2" />
+
+    <!-- 进行中指示：右上角小红点，仅区间事件计时中显示 -->
+    <ImageView
+        android:id="@+id/dotRecording"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="6dp"
+        android:src="@drawable/bg_dot"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
 </FrameLayout>

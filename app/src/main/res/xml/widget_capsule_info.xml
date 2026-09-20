@@ -7,6 +7,7 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_capsule"
+    android:previewLayout="@layout/widget_capsule"
     android:configure="com.timestamp.recorder.WidgetSingleConfigureActivity"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"

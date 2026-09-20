@@ -37,9 +37,10 @@ data class TimeInterval(
     fun duration(now: Long = System.currentTimeMillis()): Long = (end ?: now) - start
 }
 
-/** 分类染色色板（Material 风格 12 色） */
+/** 分类染色色板（Material 风格 24 色） */
 object EventColors {
     val palette = listOf(
+        // 第一组（原 12 色）
         0xFFE53935.toInt(), // 红
         0xFFFB8C00.toInt(), // 橙
         0xFFF9A825.toInt(), // 琥珀
@@ -51,7 +52,20 @@ object EventColors {
         0xFF8E24AA.toInt(), // 紫
         0xFFD81B60.toInt(), // 粉
         0xFF6D4C41.toInt(), // 棕
-        0xFF546E7A.toInt()  // 蓝灰
+        0xFF546E7A.toInt(), // 蓝灰
+        // 第二组（扩充）
+        0xFFC62828.toInt(), // 深红
+        0xFFEF6C00.toInt(), // 深橙
+        0xFFFDD835.toInt(), // 明黄
+        0xFF689F38.toInt(), // 草绿
+        0xFF26A69A.toInt(), // 薄荷
+        0xFF00BCD4.toInt(), // 亮青
+        0xFF42A5F5.toInt(), // 浅蓝
+        0xFF5C6BC0.toInt(), // 浅靛
+        0xFFAB47BC.toInt(), // 浅紫
+        0xFFEC407A.toInt(), // 玫粉
+        0xFF8D6E63.toInt(), // 浅棕
+        0xFF78909C.toInt()  // 浅蓝灰
     )
     fun random(): Int = palette.random()
 }

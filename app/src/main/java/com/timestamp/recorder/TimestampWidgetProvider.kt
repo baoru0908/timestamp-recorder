@@ -78,10 +78,10 @@ class TimestampWidgetProvider : AppWidgetProvider() {
                 }
                 views.setTextViewText(TIME_IDS[i], timeText)
 
-                // 彩色圆点：bg_dot 是白色圆形，逐行 setColorFilter 染事件色。
-                // 每个 dot ImageView 在 launcher 进程里是独立 View，各自持有独立 Drawable 实例，
-                // RemoteViews 的 setColorFilter 只作用于本行，不会互相串色。
-                views.setInt(DOT_IDS[i], "setColorFilter", ev.color)
+                // 彩色圆点：直接用 TextView 的「●」+ setTextColor。文字色每行独立，
+                // 不依赖任何 Drawable/Bitmap，跨 ROM（含 HyperOS）不串色。
+                views.setTextViewText(DOT_IDS[i], "●")
+                views.setInt(DOT_IDS[i], "setTextColor", ev.color)
 
                 // PendingIntent 判等只看 requestCode + action/data/class/identity，**extras 不参与**；
                 // 且 eventId 是 Long（毫秒时间戳），直接 toInt() 有截断碰撞窗口。故：
@@ -124,6 +124,20 @@ class TimestampWidgetProvider : AppWidgetProvider() {
             // 空状态（暂无事件）也可点击：文案写着「打开 App 添加」，点了必须真的能打开
             views.setOnClickPendingIntent(R.id.widgetEmpty, openPi)
             return views
+        }
+
+        /** 按事件色现画一个小圆 Bitmap（每次新建，不跨调用复用，避免 launcher 端失效） */
+        private fun coloredDot(context: Context, color: Int): Bitmap {
+            val d = context.resources.displayMetrics.density
+            val px = (12 * d * 2).toInt().coerceAtLeast(24)
+            val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                this.color = color
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(px / 2f, px / 2f, px / 2f, paint)
+            return bmp
         }
     }
 
@@ -173,5 +187,7 @@ object WidgetRecordHelper {
             .forEach { id -> manager.updateAppWidget(id, WidgetSingleProvider.buildRemoteViews(context, id)) }
         manager.getAppWidgetIds(ComponentName(context, WidgetCapsuleProvider::class.java))
             .forEach { id -> manager.updateAppWidget(id, WidgetCapsuleProvider.buildRemoteViews(context, id)) }
+        manager.getAppWidgetIds(ComponentName(context, WidgetCustomProvider::class.java))
+            .forEach { id -> manager.updateAppWidget(id, WidgetCustomProvider.buildRemoteViews(context, id)) }
     }
 }

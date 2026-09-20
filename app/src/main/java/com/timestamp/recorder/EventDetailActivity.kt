@@ -1,4 +1,4 @@
-﻿package com.timestamp.recorder
+package com.timestamp.recorder
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -130,10 +130,10 @@ class EventDetailActivity : BaseActivity() {
         if (event.isInterval) {
             val ongoing = repo.ongoingInterval(eventId)
             val intervals = repo.getIntervals(eventId)
-            // 主按钮：开始 / 结束（进行中染红）
+            // 主按钮：开始 / 结束；进行中保持事件色，文案表达状态
             binding.btnRecord.text = getString(if (ongoing != null) R.string.btn_stop else R.string.btn_start)
             binding.btnRecord.backgroundTintList = ColorStateList.valueOf(
-                if (ongoing != null) 0xFFD32F2F.toInt() else event.color
+                event.color
             )
             adapter.submit(intervals.map { Row.Interval(it) })
             binding.tvStats.text = if (ongoing != null) {

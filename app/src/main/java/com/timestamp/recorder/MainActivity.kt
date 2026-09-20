@@ -913,9 +913,8 @@ class MainActivity : BaseActivity() {
                     val intervals = repo.getIntervals(event.id)
                     b.tvEventCount.text = if (ongoing != null) "■" else getString(R.string.btn_start)
                     b.ivPlus.visibility = View.GONE
-                    // 进行中：按钮染红（停止感）；空闲：事件色
-                    val runningColor = if (ongoing != null) 0xFFD32F2F.toInt() else event.color
-                    b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(runningColor)
+                    // 进行中保持事件色（不整块染红），用「■」停止符 + 下方进行中文案表达计时
+                    b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
                     b.tvEventInfo.text = if (ongoing != null) {
                         getString(R.string.detail_ongoing, TimeFormat.duration(ongoing.duration()))
                     } else if (intervals.isNotEmpty()) {

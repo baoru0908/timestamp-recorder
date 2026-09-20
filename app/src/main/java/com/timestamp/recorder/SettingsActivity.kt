@@ -109,6 +109,7 @@ class SettingsActivity : BaseActivity() {
         binding.btnPinAll.setOnClickListener { pinWidget(TimestampWidgetProvider::class.java) }
         binding.btnPinSingle.setOnClickListener { pinWidget(WidgetSingleProvider::class.java) }
         binding.btnPinCapsule.setOnClickListener { pinWidget(WidgetCapsuleProvider::class.java) }
+        binding.btnPinCustom.setOnClickListener { pinWidget(WidgetCustomProvider::class.java) }
 
         // 权限 / 设置引导：**全机型显示**（各 ROM 对「一键添加」的限制不同），
         // 文案与跳转目标按机型切换 —— 小米 / 红米推荐先授「桌面快捷方式」权限
