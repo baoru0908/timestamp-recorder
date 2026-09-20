@@ -67,8 +67,12 @@ class WidgetSingleProvider : AppWidgetProvider() {
             val ongoing = event?.takeIf { it.isInterval }?.let { repo.ongoingInterval(it.id) }
             val last = event?.let { repo.lastRecord(it.id) }
             val infoText: String? = when {
-                ongoing != null -> TimeFormat.duration(ongoing.duration())
-                event?.isInterval == true -> repo.getIntervals(event.id).firstOrNull()?.let { TimeFormat.hm(it.end ?: it.start) }
+                ongoing != null -> context.getString(R.string.widget_recording_dot)
+                event?.isInterval == true -> {
+                    val lastIv = repo.getIntervals(event.id).firstOrNull()
+                    if (lastIv != null) TimeFormat.hm(lastIv.end ?: lastIv.start)
+                    else context.getString(R.string.widget_interval_start)
+                }
                 else -> last?.let { TimeFormat.hm(it) }
             }
             val bgColor = if (ongoing != null) 0xFFD32F2F.toInt() else (event?.color ?: MISSING_COLOR)
@@ -116,6 +120,8 @@ class WidgetSingleProvider : AppWidgetProvider() {
                     if (event != null) {
                         val cnt = if (event.isInterval) repo.intervalCount(event.id) else repo.recordCount(event.id)
                         setTextViewText(R.id.tvCount, context.getString(R.string.widget_single_count, cnt))
+                        setTextViewText(R.id.tvHint, context.getString(
+                            if (event.isInterval) R.string.widget_interval_hint else R.string.widget_click_hint))
                     }
                 }
             }

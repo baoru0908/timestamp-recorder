@@ -49,17 +49,16 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipPoint"
                 style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
                 android:text="@string/event_type_point" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipInterval"
                 style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="@string/event_type_interval" />
         </com.google.android.material.chip.ChipGroup>
 

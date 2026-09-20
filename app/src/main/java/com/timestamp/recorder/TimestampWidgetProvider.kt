@@ -63,17 +63,25 @@ class TimestampWidgetProvider : AppWidgetProvider() {
                 }
                 views.setViewVisibility(ROW_IDS[i], View.VISIBLE)
                 views.setTextViewText(NAME_IDS[i], ev.name)
-                val last = repo.lastRecord(ev.id)
-                views.setTextViewText(
-                    TIME_IDS[i],
+                // 区间事件：显示进行中时长 / 上次结束时间；点记录仍是开始·结束切换
+                val timeText = if (ev.isInterval) {
+                    val ongoing = repo.ongoingInterval(ev.id)
+                    val ivs = repo.getIntervals(ev.id)
+                    when {
+                        ongoing != null -> context.getString(R.string.widget_recording_dot)
+                        ivs.isNotEmpty() -> TimeFormat.hm(ivs.first().end ?: ivs.first().start)
+                        else -> context.getString(R.string.widget_interval_idle)
+                    }
+                } else {
+                    val last = repo.lastRecord(ev.id)
                     if (last != null) TimeFormat.hm(last) else context.getString(R.string.widget_row_no_record)
-                )
+                }
+                views.setTextViewText(TIME_IDS[i], timeText)
 
-                // 彩色圆点：直接按事件色预渲染一张小圆点 Bitmap，再 setImageViewBitmap。
-                // ⚠️ 不能用「共用 bg_dot shape + setColorFilter」：资源 drawable 默认共享同一实例，
-                //    一行 setColorFilter 改的是同一份，后设的覆盖前面 → 所有圆点只剩最后一个事件的颜色（串色）。
-                //    Bitmap 每色一张、彼此独立，跨 ROM 稳定（与单事件组件的结论一致）。
-                views.setImageViewBitmap(DOT_IDS[i], coloredDot(context, ev.color))
+                // 彩色圆点：bg_dot 是白色圆形，逐行 setColorFilter 染事件色。
+                // 每个 dot ImageView 在 launcher 进程里是独立 View，各自持有独立 Drawable 实例，
+                // RemoteViews 的 setColorFilter 只作用于本行，不会互相串色。
+                views.setInt(DOT_IDS[i], "setColorFilter", ev.color)
 
                 // PendingIntent 判等只看 requestCode + action/data/class/identity，**extras 不参与**；
                 // 且 eventId 是 Long（毫秒时间戳），直接 toInt() 有截断碰撞窗口。故：
@@ -117,27 +125,6 @@ class TimestampWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widgetEmpty, openPi)
             return views
         }
-
-        /**
-         * 按事件色渲染一张圆形圆点 Bitmap（带缓存）。
-         * 圆点在布局里固定 10dp，这里按 2x 出图保证高分屏不糊。
-         * 缓存在进程内按颜色复用，一次刷新最多 6 个事件，开销可忽略。
-         */
-        private val dotCache = java.util.concurrent.ConcurrentHashMap<Int, Bitmap>()
-
-        private fun coloredDot(context: Context, color: Int): Bitmap =
-            dotCache.getOrPut(color) {
-                val d = context.resources.displayMetrics.density
-                val px = (10 * d * 2).toInt().coerceAtLeast(20)
-                val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(bmp)
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    this.color = color
-                    style = Paint.Style.FILL
-                }
-                canvas.drawCircle(px / 2f, px / 2f, px / 2f, paint)
-                bmp
-            }
     }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {

@@ -80,6 +80,10 @@
     <string name="widget_empty_hint">暂无事件\n点此打开 App 添加</string>
     <string name="widget_more">还有 %1$d 个事件</string>
     <string name="widget_row_no_record">未记录</string>
+    <string name="widget_interval_idle">未开始</string>
+    <string name="widget_interval_start">点此开始</string>
+    <string name="widget_recording_dot">● 进行中</string>
+    <string name="widget_interval_hint">点击开始 / 结束</string>
     <string name="widget_single_bind_title">绑定事件</string>
     <string name="widget_single_bind_hint">选择该小组件要绑定的目标事件：桌面将显示事件色大按钮，点击即记录该事件。</string>
     <string name="widget_single_no_event">还没有事件，请先打开 App 创建事件</string>
