@@ -211,10 +211,13 @@
     <string name="stats_busiest_event">记录最多的事件</string>
     <string name="stats_no_data">还没有任何记录\n去主页点几下「记录」吧</string>
     <string name="stats_per_event">各事件记录数</string>
-    <string name="stats_by_day">近 14 天记录趋势</string>
+    <string name="stats_by_day">近 %1$d 天记录趋势</string>
     <string name="stats_empty_hint">暂无数据</string>
     <string name="stats_back_to_all">全部事件</string>
-    <string name="stats_focus_prefix">当前：</string>
+    <string name="stats_focus_prefix">当前：%1$s</string>
+    <string name="stats_interval_count">时间段数</string>
+    <string name="stats_duration_title">时间段时长</string>
+    <string name="stats_range_days">%1$d 天</string>
 
     <!-- 数据备份 -->
     <string name="backup_section_title">数据备份</string>
@@ -239,7 +242,7 @@
     <string name="timeline_just_now">刚刚</string>
     <string name="timeline_minutes_ago">%1$d 分钟前</string>
     <string name="timeline_hours_ago">%1$d 小时前</string>
-    <string name="timeline_hours_minutes_ago">%1$d 小时, %2$d 分钟前</string>
+    <string name="timeline_hours_minutes_ago">%1$d 小时 %2$d 分钟前</string>
     <string name="timeline_days_ago">%1$d 天前</string>
     <string name="timeline_open_detail">查看该事件</string>
 </resources>

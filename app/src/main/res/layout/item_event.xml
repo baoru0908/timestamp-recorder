@@ -45,13 +45,37 @@
             android:layout_marginStart="12dp"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvEventName"
-                android:layout_width="wrap_content"
+            <!-- 名称行：事件名 + 次数徽章（区间事件显示「共 N 段」，点事件徽章隐藏） -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvEventName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvCountBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:paddingStart="7dp"
+                    android:paddingEnd="7dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:maxLines="1"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvEventInfo"

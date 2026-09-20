@@ -96,6 +96,18 @@ class EventRepository(context: Context) {
     private fun recordsKey(id: Long) = "records_$id"
     private fun intervalsKey(id: Long) = "intervals_$id"
 
+    /**
+     * 数据变更通知：**任何**写入（详情页、主页快捷记录、桌面小组件、恢复备份…）
+     * 都会回调，供前台页面统一刷新 —— 避免「删了却还显示」这类刷新时序缺口。
+     */
+    fun registerChangeListener(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.registerOnSharedPreferenceChangeListener(l)
+    }
+
+    fun unregisterChangeListener(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.unregisterOnSharedPreferenceChangeListener(l)
+    }
+
     // ---------- 事件 CRUD ----------
 
     @Synchronized
@@ -214,13 +226,15 @@ class EventRepository(context: Context) {
         return millis
     }
 
+    /**
+     * 按**时间戳值**删除一条点记录。
+     * ⚠️ 刻意不按下标删：适配器下标可能与存储错位（外部插/删后未重绑），
+     * 错位会删错条、越界会静默不删 —— 只认记录本身的值才稳定。
+     */
     @Synchronized
-    fun deleteRecord(eventId: Long, position: Int) {
+    fun deleteRecord(eventId: Long, millis: Long) {
         val list = getRecords(eventId).toMutableList()
-        if (position in list.indices) {
-            list.removeAt(position)
-            saveRecords(eventId, list)
-        }
+        if (list.remove(millis)) saveRecords(eventId, list)
     }
 
     /** 批量删除：按记录的时间戳值删除（批量勾选用） */
@@ -338,11 +352,13 @@ class EventRepository(context: Context) {
         return true
     }
 
+    /** 按**开始时刻**删除一条时间段（同上：只认标识，不认下标）。 */
     @Synchronized
-    fun deleteIntervalAt(eventId: Long, position: Int) {
+    fun deleteIntervalByStart(eventId: Long, start: Long) {
         val list = getIntervals(eventId).toMutableList()
-        if (position in list.indices) {
-            list.removeAt(position)
+        val idx = list.indexOfFirst { it.start == start }
+        if (idx >= 0) {
+            list.removeAt(idx)
             saveIntervals(eventId, list)
         }
     }
@@ -405,6 +421,19 @@ object TimeFormat {
             mins > 0 -> "${mins}分钟"
             else -> "不到1分钟"
         }
+    }
+
+    /**
+     * 秒表样式（进行中读秒）：不足 1 小时 → `MM:SS`，超过 1 小时 → `H:MM:SS`。
+     * 用等宽数字呈现，逐秒跳动时数字不抖动。
+     */
+    fun durationClock(millis: Long): String {
+        val total = (if (millis < 0) 0 else millis) / 1000
+        val h = total / 3600
+        val m = (total % 3600) / 60
+        val s = total % 60
+        return if (h > 0) String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", h, m, s)
+        else String.format(java.util.Locale.getDefault(), "%02d:%02d", m, s)
     }
 
     /**

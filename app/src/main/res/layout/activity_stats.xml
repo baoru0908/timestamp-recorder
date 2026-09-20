@@ -5,8 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_main_gradient">
 
-    <!-- 内容全高铺满（液态玻璃顶栏的采样源），滚动时内容从玻璃底下穿过实时折射；
-         顶部让位 = AppBar 实际高度（含状态栏），由 BaseActivity.installLiquidTopGlass 统一设置 -->
+    <!-- 内容全高铺满（液态玻璃顶栏的采样源），滚动时内容从玻璃底下穿过实时折射 -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollContent"
         android:layout_width="match_parent"
@@ -22,7 +21,64 @@
             android:paddingEnd="16dp"
             android:paddingTop="16dp">
 
-            <!-- 概览 -->
+            <!-- 焦点条：从某事件详情进入统计时显示「当前：<事件名>」+ 返回全部 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/focusBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/glass_card"
+                app:cardCornerRadius="@dimen/radius_md"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/glass_stroke"
+                style="?attr/materialCardViewFilledStyle">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp">
+
+                    <View
+                        android:id="@+id/viewFocusDot"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/bg_color_dot" />
+
+                    <TextView
+                        android:id="@+id/tvFocusName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFocusBack"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:text="@string/stats_back_to_all"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KPI 2×2：点事件与区间事件分治，不再把「条」和「段」混成一个数 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -32,7 +88,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="6dp"
                     app:cardBackgroundColor="@color/glass_card"
                     app:cardCornerRadius="@dimen/radius_lg"
                     app:cardElevation="0dp"
@@ -44,7 +100,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="16dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -54,13 +110,12 @@
                             android:textSize="12sp" />
 
                         <TextView
-                            android:id="@+id/tvTotalEvents"
+                            android:id="@+id/tvKpiEvents"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="0"
                             android:textColor="?attr/colorOnSurface"
-                            android:textSize="28sp"
+                            android:textSize="26sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -69,7 +124,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     app:cardBackgroundColor="@color/glass_card"
                     app:cardCornerRadius="@dimen/radius_lg"
                     app:cardElevation="0dp"
@@ -81,7 +136,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="16dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -91,13 +146,91 @@
                             android:textSize="12sp" />
 
                         <TextView
-                            android:id="@+id/tvTotalRecords"
+                            android:id="@+id/tvKpiRecords"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="0"
                             android:textColor="?attr/colorOnSurface"
-                            android:textSize="28sp"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    app:cardBackgroundColor="@color/glass_card"
+                    app:cardCornerRadius="@dimen/radius_lg"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/glass_stroke"
+                    style="?attr/materialCardViewFilledStyle">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_interval_count"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvKpiIntervals"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    app:cardBackgroundColor="@color/glass_card"
+                    app:cardCornerRadius="@dimen/radius_lg"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/glass_stroke"
+                    style="?attr/materialCardViewFilledStyle">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_total_duration"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvKpiDuration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -105,6 +238,7 @@
 
             <!-- 记录最多的事件 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/busiestCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -154,46 +288,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 时长统计（仅区间事件有数据时显示） -->
-            <LinearLayout
-                android:id="@+id/durationSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone"
-                android:layout_marginTop="18dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="@string/stats_total_duration"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:cardBackgroundColor="@color/glass_card"
-                    app:cardCornerRadius="@dimen/radius_lg"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/glass_stroke"
-                    style="?attr/materialCardViewFilledStyle">
-
-                    <TextView
-                        android:id="@+id/tvDurationSummary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="16dp"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp" />
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
             <!-- 各事件记录数 -->
             <TextView
                 android:layout_width="wrap_content"
@@ -223,16 +317,100 @@
                     android:paddingTop="8dp" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 近 14 天趋势 -->
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- 时间段时长（仅区间事件有数据时显示） -->
+            <LinearLayout
+                android:id="@+id/durationSection"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/stats_duration_title"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:cardBackgroundColor="@color/glass_card"
+                    app:cardCornerRadius="@dimen/radius_lg"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/glass_stroke"
+                    style="?attr/materialCardViewFilledStyle">
+
+                    <TextView
+                        android:id="@+id/tvDurationSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- 近 N 天趋势 + 天数切换 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:text="@string/stats_by_day"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvTrendTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRange7"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRange14"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRange30"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -265,7 +443,7 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 液态玻璃顶栏：衬在透明 AppBar 之下，实时折射滚动内容 -->
+    <!-- 液态玻璃顶栏 -->
     <com.qmdeve.liquidglass.widget.LiquidGlassView
         android:id="@+id/topGlass"
         android:layout_width="match_parent"

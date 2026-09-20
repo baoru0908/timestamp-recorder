@@ -578,6 +578,7 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        repo.registerChangeListener(prefsListener)
         refresh()
         // 用户可能在系统里改了「高级材质」开关或「材质风格」，回到前台时重新对齐
         syncBarMode()
@@ -587,10 +588,36 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onPause() {
+        repo.unregisterChangeListener(prefsListener)
+        refreshHandler.removeCallbacks(pendingRefresh)
         stopTicker()
         // 「⋮」菜单是个独立窗口，Activity 退到后台时它不会被自动收掉，这里手动关
         dismissOverflowMenu()
         super.onPause()
+    }
+
+    /**
+     * 详情页「时间线」菜单跳回本页时（singleTop + CLEAR_TOP）复用**同一实例**，
+     * 不再叠加新的 MainActivity —— 旧写法 `startActivity(MainActivity)` 会叠出多份实例，
+     * 返回时看到的是某份陈旧列表（「删了却还显示」的成因之一）。
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_TIMELINE, false)) {
+            selectTab(TAB_TIMELINE)
+        }
+    }
+
+    /** 数据变更监听（防抖 120ms）：任何写入都让主页跟上最新数据，堵住刷新时序缺口。 */
+    private val prefsListener =
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> scheduleRefresh() }
+    private val refreshHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val pendingRefresh = Runnable { refresh() }
+
+    private fun scheduleRefresh() {
+        refreshHandler.removeCallbacks(pendingRefresh)
+        refreshHandler.postDelayed(pendingRefresh, 120L)
     }
 
     // ---------- 进行中区间的秒级跳动（仅在前台、且确有进行中区间时跑） ----------
@@ -598,11 +625,20 @@ class MainActivity : BaseActivity() {
     private var ticking = false
     private val tickRunnable = object : Runnable {
         override fun run() {
-            // 只重绑事件列表，让「进行中 N」的时长刷新；空转时自动停
-            val hasOngoing = repo.getEvents().any { it.isInterval && repo.ongoingInterval(it.id) != null }
-            if (hasOngoing) {
-                adapter.notifyDataSetChanged()
-                ticker.postDelayed(this, 1000)
+            // 只重绑「进行中」的那几行（秒表读秒跳动），其余行一律不动 ——
+            // 旧写法每秒 notifyDataSetChanged() 整表重绑，白白多刷无关卡片。
+            var anyOngoing = false
+            for (i in adapter.items.indices) {
+                val ev = adapter.items[i]
+                if (ev.isInterval && repo.ongoingInterval(ev.id) != null) {
+                    adapter.notifyItemChanged(i)
+                    anyOngoing = true
+                }
+            }
+            if (anyOngoing) {
+                // 对齐到下一个整秒，读秒边界更准（固定 1000ms 会缓慢漂移）
+                val delay = 1000L - (System.currentTimeMillis() % 1000L)
+                ticker.postDelayed(this, delay)
             } else {
                 ticking = false
             }
@@ -908,23 +944,24 @@ class MainActivity : BaseActivity() {
                 }
 
                 if (event.isInterval) {
-                    // 区间事件：显示进行中状态 / 次数与上次时长
+                    // 区间事件：快捷钮只负责「开始 / 结束」，次数移到名字右侧的徽章上
                     val ongoing = repo.ongoingInterval(event.id)
                     val intervals = repo.getIntervals(event.id)
-                    b.tvEventCount.text = if (ongoing != null) "■" else getString(R.string.btn_start)
+                    b.tvEventCount.text = getString(if (ongoing != null) R.string.btn_stop else R.string.btn_start)
                     b.ivPlus.visibility = View.GONE
-                    // 进行中保持事件色（不整块染红），用「■」停止符 + 下方进行中文案表达计时
                     b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
+                    // 「共 N 段」徽章：区间事件此前完全不显示次数，这是补齐点
+                    showCountBadge(b.tvCountBadge, getString(R.string.event_intervals, intervals.size))
                     b.tvEventInfo.text = if (ongoing != null) {
-                        getString(R.string.detail_ongoing, TimeFormat.duration(ongoing.duration()))
+                        // 进行中：秒表读秒（MM:SS / H:MM:SS），逐秒真实跳动
+                        getString(R.string.detail_ongoing, TimeFormat.durationClock(ongoing.duration()))
                     } else if (intervals.isNotEmpty()) {
-                        val last = intervals.first()
-                        getString(R.string.interval_last, TimeFormat.duration(last.duration()))
+                        getString(R.string.interval_last, TimeFormat.duration(intervals.first().duration()))
                     } else {
                         getString(R.string.event_no_record)
                     }
                 } else {
-                    // 点事件：原有行为
+                    // 点事件：次数仍留在快捷钮（＋ N），徽章隐藏 —— 两种类型的视觉不打架
                     val count = repo.recordCount(event.id)
                     val last = repo.lastRecord(event.id)
                     b.tvEventInfo.text = if (last != null) {
@@ -932,6 +969,7 @@ class MainActivity : BaseActivity() {
                     } else {
                         getString(R.string.event_no_record)
                     }
+                    b.tvCountBadge.visibility = View.GONE
                     b.tvEventCount.text = count.toString()
                     b.ivPlus.visibility = View.VISIBLE
                     b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
@@ -949,6 +987,20 @@ class MainActivity : BaseActivity() {
                     }
                 } else {
                     b.btnDrag.visibility = View.GONE
+                }
+            }
+
+            /** 次数徽章：中性浅底 + 次要色文字（自动跟随深浅色主题）的圆角胶囊 */
+            private fun showCountBadge(tv: TextView, text: String) {
+                val dim = com.google.android.material.color.MaterialColors.getColor(
+                    tv, com.google.android.material.R.attr.colorOnSurfaceVariant
+                )
+                tv.visibility = View.VISIBLE
+                tv.text = text
+                tv.setTextColor(dim)
+                tv.background = GradientDrawable().apply {
+                    cornerRadius = 100f * tv.resources.displayMetrics.density
+                    setColor(withAlpha(dim, 0x1F))
                 }
             }
         }

@@ -212,16 +212,15 @@ class EventDetailActivity : BaseActivity() {
         }
     }
 
-    private fun confirmDelete(position: Int) {
-        val row = adapter.items[position]
+    private fun confirmDelete(row: Row) {
         val msg = rowCopyText(row)
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.delete_record_title)
             .setMessage(getString(R.string.delete_record_msg, msg))
             .setPositiveButton(R.string.delete) { _, _ ->
                 when (row) {
-                    is Row.Point -> repo.deleteRecord(eventId, position)
-                    is Row.Interval -> repo.deleteIntervalAt(eventId, position)
+                    is Row.Point -> repo.deleteRecord(eventId, row.millis)
+                    is Row.Interval -> repo.deleteIntervalByStart(eventId, row.iv.start)
                 }
                 refresh()
                 startTickerIfNeeded()
@@ -328,7 +327,8 @@ class EventDetailActivity : BaseActivity() {
             6 -> startActivity(Intent(this, StatsActivity::class.java)
                 .putExtra(StatsActivity.EXTRA_FOCUS_EVENT_ID, eventId))
             7 -> startActivity(Intent(this, MainActivity::class.java)
-                .putExtra(MainActivity.EXTRA_OPEN_TIMELINE, true))
+                .putExtra(MainActivity.EXTRA_OPEN_TIMELINE, true)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
             else -> return super.onOptionsItemSelected(item)
         }
         return true
@@ -501,7 +501,7 @@ class EventDetailActivity : BaseActivity() {
             } else {
                 holder.b.tvCopy.setOnClickListener { copy(rowCopyText(row)) }
                 holder.b.root.setOnClickListener { copy(rowCopyText(row)) }
-                holder.b.root.setOnLongClickListener { confirmDelete(position); true }
+                holder.b.root.setOnLongClickListener { confirmDelete(row); true }
             }
         }
 
