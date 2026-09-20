@@ -14,6 +14,17 @@
    正文取自 `docs/release-notes/vX.Y.Z.md`）。
    签名指纹必须校验 `cca83079…f8f976ce`；已发布 Release 永不改动。
    后台任务完成通知不可靠，产物要用 `ls` 主动确认。
+
+   🔴 **发版完成 = 三件套齐全，缺一不可**：
+   ① 签名 APK 落盘（根目录 `TimestampRecorder_vX.Y.Z.apk`）
+   ② 远端 tag `vX.Y.Z` 存在（`git ls-remote --tags origin`）
+   ③ GitHub Release 已建且**挂有该 APK**（`gh release list` / `gh release view vX.Y.Z`）
+
+   **「改版本号 + commit + push」不算发版**：只要动了 `versionCode / versionName`，就必须在**同一轮**
+   跑 `release.ps1` 把三件套补齐，并在结束前**主动验收**（不要只凭脚本输出或后台通知）。
+   `assembleDebug` / `lintDebug` 只证明「能编译」，**不等于发版、不产出签名包**。
+   `-SkipRelease` 仅限「本机自测出包」；除非主人当轮明确说「不发版」，否则一律默认发版。
+   历史教训：v4.1.3 / v4.3.0 / v4.4.0 都出现「版本号升了、代码推了，却无 tag / Release / 签名包」。
 4. **ROM 兼容**：优先标准 AndroidX API，ROM 特殊路径只做增强；视觉 / 布局结论必须真机
    像素 / frame 举证；互斥与取舍写进 README「已知限制」。
 5. **主人明确「由我测试」时立即停手**，不要再用他的设备切设置做验证。

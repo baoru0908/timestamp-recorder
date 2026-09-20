@@ -13,7 +13,10 @@
 
 - 每个版本发一个 GitHub Release，说明用**中文**（`docs/release-notes/vX.Y.Z.md`，`release.ps1` / `gh_release.py` 优先读取）。
 - **打 tag + 建 GitHub Release 是发版的必做步骤**，由 `tools/release.ps1` **默认完成**（依赖 `gh` 已认证）；
-  只出包不发版时才加 `-SkipRelease`。历史教训：v4.1.1 / v4.1.2 曾因脚本开关默认跳过发布，代码推了却没有 tag / Release。
+  只出包不发版时才加 `-SkipRelease`。**改版本号 → 必须同一轮跑 `release.ps1` 把「签名包 + tag + Release」补齐；
+  只 commit + push 不算发版**（`-SkipRelease` 仅限本机自测出包，且需主人当轮明确同意不发版）。
+  历史教训：v4.1.1 / v4.1.2 曾因脚本开关默认跳过发布；v4.1.3 / v4.3.0 / v4.4.0 则
+  「版本号升了、代码推了，却始终没跑 `release.ps1`」——二者同样算**未发版**。
 - **已发布的 Release / tag 永不改动**；需要重出必须升版本号，走全新 Release。
 - ⚠️ **发版前自查**：问一句「这版有没有新功能 / 新交互 / 新依赖？」——有就必须 x.y.0。
   历史教训：v3.1.8（Tab 图标）、v3.1.11（ViewPager2 + 新依赖）都是功能版却按 patch 发了，引以为戒。
@@ -76,6 +79,17 @@ gh release create vX.Y.Z --notes-file docs/release-notes/vX.Y.Z.md <apk>
 
 ## 5. 发版自查清单
 
+> 🔴 **先过「发版三件套」硬关卡** —— 这是「发版是否完成」的唯一判据，缺一即视为**未发版**：
+>
+> 1. **签名包**：根目录有 `TimestampRecorder_vX.Y.Z.apk`（release.keystore 签名，指纹 `cca83079…f8f976ce`）
+> 2. **tag**：`git ls-remote --tags origin` 能看到 `vX.Y.Z`
+> 3. **Release**：`gh release list` 有该版本，且 `gh release view vX.Y.Z` 的 assets 里**挂着上面的 APK**
+>
+> **只 commit + push（哪怕版本号已升）不算发版**；只要动了版本号，就必须在**同一轮**跑
+> `tools/release.ps1` 把三件套补齐。历史教训：v4.1.3 / v4.3.0 / v4.4.0 版本号升了、代码推了，
+> 却漏了 tag / Release / 签名包。
+
+- [ ] **发版三件套齐全**（上面 1 / 2 / 3 逐条**实测**确认，不看脚本输出、不等后台通知）
 - [ ] 版本号语义正确、versionCode 恰好 +1
 - [ ] release-notes / DEVELOPMENT.md / README 三处已更新并推送
 - [ ] 真机回归：开 / 关高级材质两种形态布局一致，App 可正常启动
