@@ -108,7 +108,6 @@ class SettingsActivity : BaseActivity() {
         // 一键添加到桌面（标准 API：支持的 ROM 弹确认框钉到桌面；不支持的 ROM 退回手动添加指引）
         binding.btnPinAll.setOnClickListener { pinWidget(TimestampWidgetProvider::class.java) }
         binding.btnPinSingle.setOnClickListener { pinWidget(WidgetSingleProvider::class.java) }
-        binding.btnPinCapsule.setOnClickListener { pinWidget(WidgetCapsuleProvider::class.java) }
         binding.btnPinCustom.setOnClickListener { pinWidget(WidgetCustomProvider::class.java) }
 
         // 权限 / 设置引导：**全机型显示**（各 ROM 对「一键添加」的限制不同），

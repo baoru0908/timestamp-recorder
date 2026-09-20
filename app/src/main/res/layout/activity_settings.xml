@@ -274,7 +274,7 @@
                             android:text="@string/pin_widget_single" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPinCapsule"
+                            android:id="@+id/btnPinCustom"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="6dp"
@@ -286,20 +286,8 @@
                             android:paddingStart="10dp"
                             android:paddingEnd="10dp"
                             android:textSize="13sp"
-                            android:text="@string/pin_widget_capsule" />
+                            android:text="@string/widget_custom_label" />
                     </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnPinCustom"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        android:minWidth="0dp"
-                        android:maxLines="1"
-                        android:textSize="13sp"
-                        android:text="@string/pin_widget_custom" />
 
                     <!-- 权限 / 设置引导（全机型显示）：部分 ROM 对「一键添加」有额外限制 ——
                          小米需要先授予「桌面快捷方式」权限（米系推荐先点一下）；
