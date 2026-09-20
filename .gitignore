@@ -24,7 +24,14 @@ __pycache__/
 *.pyc
 
 # 本机调试产物：adb 截图、裁图、图标预览等临时文件，不入库
+# ⚠️ 末行原为损坏规则 `*.png
+w*.txt`（`
+` 是字面反斜杠+n，解析成单个不生效的 pattern），
+#    v4.5.0 按原意拆成下面几条：临时 PNG 与 `_w*.txt` 都不入库，仅放行 docs/images 正式截图。
 _*.png
+*.png
+!docs/images/*.png
+_w*.txt
 
 # 交付安装包与签名密钥：严禁入库
 # （安装包请走 GitHub Releases，不要放进仓库）
