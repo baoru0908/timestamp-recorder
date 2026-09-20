@@ -1,31 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  类型二：单事件大按钮小组件（创建时绑定一个事件）。
-
-  尺寸策略：允许缩放为 1×1 ~ 4×4 之间的任意格子组合。
-  - minWidth/minHeight 取「1 格」（Android 官方换算：n 格 ≈ 70n - 30 dp，1 格 = 40dp）
-  - minResizeWidth/minResizeHeight 同样取 1 格，用户才能把它拖到最小
-  - maxResizeWidth/maxResizeHeight 限到 4 格（250dp），避免拉出超长变形
-  - 默认落地尺寸仍为 2×2（targetCellWidth/Height）
-  实际渲染的布局分档在 WidgetSingleProvider 里按真实格子尺寸动态选择。
--->
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:minWidth="40dp"
-    android:minHeight="40dp"
-    android:minResizeWidth="40dp"
-    android:minResizeHeight="40dp"
-    android:maxResizeWidth="250dp"
-    android:maxResizeHeight="250dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="2"
-    android:updatePeriodMillis="0"
-    android:initialLayout="@layout/widget_single"
-    android:previewLayout="@layout/widget_single"
-    android:configure="com.timestamp.recorder.WidgetSingleConfigureActivity"
-    android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
-    android:widgetFeatures="reconfigurable"
-    android:description="@string/widget_single_description"
-    android:previewImage="@drawable/widget_preview_single"
-    tools:targetApi="31" />
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  类型二：单事件大按钮小组件（创建时绑定一个事件）。
+
+  尺寸策略：允许缩放为 1×1 ~ 4×4 之间的任意格子组合。
+  - minWidth/minHeight 取「1 格」（Android 官方换算：n 格 ≈ 70n - 30 dp，1 格 = 40dp）
+  - minResizeWidth/minResizeHeight 同样取 1 格，用户才能把它拖到最小
+  - maxResizeWidth/maxResizeHeight 限到 4 格（250dp），避免拉出超长变形
+  - 默认落地尺寸仍为 2×2（targetCellWidth/Height）
+  实际渲染的布局分档在 WidgetSingleProvider 里按真实格子尺寸动态选择。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeWidth="250dp"
+    android:maxResizeHeight="250dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_single"
+    android:configure="com.timestamp.recorder.WidgetSingleConfigureActivity"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:description="@string/widget_single_description"
+    android:previewImage="@drawable/widget_preview_single"
+    tools:targetApi="31" />
