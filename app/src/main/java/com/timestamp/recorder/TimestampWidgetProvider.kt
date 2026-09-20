@@ -185,8 +185,6 @@ object WidgetRecordHelper {
             .forEach { id -> manager.updateAppWidget(id, TimestampWidgetProvider.buildRemoteViews(context, id)) }
         manager.getAppWidgetIds(ComponentName(context, WidgetSingleProvider::class.java))
             .forEach { id -> manager.updateAppWidget(id, WidgetSingleProvider.buildRemoteViews(context, id)) }
-        manager.getAppWidgetIds(ComponentName(context, WidgetCapsuleProvider::class.java))
-            .forEach { id -> manager.updateAppWidget(id, WidgetCapsuleProvider.buildRemoteViews(context, id)) }
         manager.getAppWidgetIds(ComponentName(context, WidgetCustomProvider::class.java))
             .forEach { id -> manager.updateAppWidget(id, WidgetCustomProvider.buildRemoteViews(context, id)) }
     }

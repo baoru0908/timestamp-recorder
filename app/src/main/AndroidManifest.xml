@@ -87,20 +87,7 @@
                 android:resource="@xml/widget_single_info" />
         </receiver>
 
-        <!-- 桌面小组件类型三：单事件 2×1 胶囊（创建时绑定事件） -->
-        <receiver
-            android:name=".WidgetCapsuleProvider"
-            android:label="@string/widget_capsule_label"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_capsule_info" />
-        </receiver>
-
-        <!-- 桌面小组件类型四：自定义（自选事件 + 标题 + 背景色） -->
+        <!-- 桌面小组件类型三：自定义（自选事件 + 标题 + 背景色） -->
         <activity
             android:name=".WidgetCustomConfigureActivity"
             android:exported="true"

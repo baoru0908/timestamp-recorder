@@ -55,16 +55,6 @@ class WidgetSingleConfigureActivity : BaseActivity() {
         }
     }
 
-    /**
-     * 本配置页同时服务「单事件大按钮」和「2×1 胶囊」两种外观。
-     * 必须按当前实例真实的 provider 去构建 RemoteViews —— 用错布局的话，
-     * 设置的目标控件 id 在另一个布局里不存在，桌面刷新会失败、小组件空着。
-     */
-    private fun isCapsule(): Boolean {
-        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId) ?: return false
-        return info.provider?.className == WidgetCapsuleProvider::class.java.name
-    }
-
     private fun onPick(eventId: Long) {
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             setResult(RESULT_CANCELED)
@@ -73,12 +63,7 @@ class WidgetSingleConfigureActivity : BaseActivity() {
         }
         WidgetPrefs.saveSingleBind(this, widgetId, eventId)
         val manager = AppWidgetManager.getInstance(this)
-        val views = if (isCapsule()) {
-            WidgetCapsuleProvider.buildRemoteViews(this, widgetId)
-        } else {
-            WidgetSingleProvider.buildRemoteViews(this, widgetId)
-        }
-        manager.updateAppWidget(widgetId, views)
+        manager.updateAppWidget(widgetId, WidgetSingleProvider.buildRemoteViews(this, widgetId))
         // ⚠️ 必须把 EXTRA_APPWIDGET_ID 放进结果 Intent：带 configure 的小组件，
         //    launcher 靠它确认「哪个 widgetId 被配置成功」。只 setResult(RESULT_OK)
         //    不带这个 extra，launcher 视为无效 → 选完事件页面关掉、桌面什么都不出现（添加失败）。

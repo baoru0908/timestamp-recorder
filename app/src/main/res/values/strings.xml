@@ -86,18 +86,12 @@
     <string name="widget_interval_hint">点击开始 / 结束</string>
     <string name="widget_custom_label">自定义小组件</string>
     <string name="widget_custom_config_title">自定义小组件设置</string>
-    <string name="pin_widget_custom">添加自定义小组件</string>
     <string name="widget_single_bind_title">绑定事件</string>
     <string name="widget_single_bind_hint">选择该小组件要绑定的目标事件：桌面将显示事件色大按钮，点击即记录该事件。</string>
     <string name="widget_single_no_event">还没有事件，请先打开 App 创建事件</string>
     <string name="widget_single_missing">事件已删除\n长按重新配置</string>
     <string name="widget_single_missing_short">已删除</string>
     <string name="widget_single_count">共 %1$d 次</string>
-    <string name="widget_capsule_label">时间戳 · 胶囊</string>
-    <string name="widget_capsule_description">单事件 2×1 胶囊：绑定一个事件，横向胶囊一键记录</string>
-    <string name="widget_capsule_record">记录</string>
-    <string name="widget_capsule_missing">事件已删除</string>
-    <string name="pin_widget_capsule">胶囊</string>
     <!-- 权限 / 设置引导（全机型显示，文案与跳转按机型在代码里切换） -->
     <string name="pin_perm_btn">前往权限 / 应用设置</string>
     <string name="pin_perm_btn_miui">授予「桌面快捷方式」权限（小米推荐先点这个）</string>
