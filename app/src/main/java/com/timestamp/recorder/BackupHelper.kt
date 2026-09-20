@@ -6,22 +6,26 @@ import org.json.JSONObject
 /**
  * JSON 全量备份 / 恢复（零权限、走系统 SAF）。
  *
- * 备份结构：
+ * 备份结构（format 2）：
  * {
  *   "app": "timestamp-recorder",
- *   "format": 1,
+ *   "format": 2,
  *   "exportedAt": <millis>,
- *   "events": [ {id,name,color,createdAt}, ... ],
- *   "records": { "<eventId>": [<millis>, ...], ... }
+ *   "events": [ {id,name,color,createdAt,type}, ... ],
+ *   "records": { "<eventId>": [<millis>, ...], ... },
+ *   "intervals": { "<eventId>": [ {start, end?}, ... ], ... }
  * }
+ *
+ * format 1（仅 records，无 type/interval）仍能解析：type 缺省点事件、intervals 为空。
  */
 object BackupHelper {
     private const val MAGIC = "timestamp-recorder"
-    private const val FORMAT = 1
+    private const val FORMAT = 2
 
     data class BackupData(
         val events: List<TimestampEvent>,
-        val records: Map<Long, List<Long>>
+        val records: Map<Long, List<Long>>,
+        val intervals: Map<Long, List<TimeInterval>> = emptyMap()
     )
 
     fun exportJson(repo: EventRepository): String {
@@ -37,6 +41,7 @@ object BackupHelper {
                 put("name", e.name)
                 put("color", e.color)
                 put("createdAt", e.createdAt)
+                put("type", e.type)
             })
         }
         root.put("events", evArr)
@@ -49,10 +54,23 @@ object BackupHelper {
         }
         root.put("records", recObj)
 
+        val ivObj = JSONObject()
+        repo.getEvents().forEach { e ->
+            if (!e.isInterval) return@forEach
+            val arr = JSONArray()
+            repo.getIntervals(e.id).forEach { iv ->
+                val o = JSONObject().put("start", iv.start)
+                if (iv.end != null) o.put("end", iv.end)
+                arr.put(o)
+            }
+            ivObj.put(e.id.toString(), arr)
+        }
+        root.put("intervals", ivObj)
+
         return root.toString(2)
     }
 
-    /** 解析备份 JSON；格式不符返回 null */
+    /** 解析备份 JSON；格式不符返回 null。format 1/2 均可。 */
     fun parse(json: String): BackupData? {
         return try {
             val root = JSONObject(json)
@@ -64,7 +82,8 @@ object BackupHelper {
                     id = o.getLong("id"),
                     name = o.getString("name"),
                     color = o.getInt("color"),
-                    createdAt = o.getLong("createdAt")
+                    createdAt = o.getLong("createdAt"),
+                    type = o.optInt("type", TimestampEvent.TYPE_POINT)
                 )
             }
             val recObj = root.getJSONObject("records")
@@ -73,7 +92,22 @@ object BackupHelper {
                 val arr = recObj.getJSONArray(k)
                 records[k.toLong()] = (0 until arr.length()).map { arr.getLong(it) }
             }
-            BackupData(events, records)
+            // intervals：format 1 没有该字段 → 空
+            val intervals = mutableMapOf<Long, List<TimeInterval>>()
+            if (root.has("intervals")) {
+                val ivObj = root.getJSONObject("intervals")
+                ivObj.keys().forEach { k ->
+                    val arr = ivObj.getJSONArray(k)
+                    intervals[k.toLong()] = (0 until arr.length()).map { i ->
+                        val o = arr.getJSONObject(i)
+                        TimeInterval(
+                            start = o.getLong("start"),
+                            end = if (o.has("end")) o.getLong("end") else null
+                        )
+                    }
+                }
+            }
+            BackupData(events, records, intervals)
         } catch (_: Exception) {
             null
         }

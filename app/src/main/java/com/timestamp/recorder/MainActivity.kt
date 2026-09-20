@@ -56,6 +56,7 @@ class MainActivity : BaseActivity() {
         private const val TYPE_MONTH = 0
         private const val TYPE_RECORD = 1
         private const val TYPE_CAP = 2
+        private const val TYPE_INTERVAL = 3
         /** 底栏形态：布局内的静态胶囊 / 独立窗口 + 系统级背后模糊 */
 
 
@@ -582,12 +583,45 @@ class MainActivity : BaseActivity() {
         syncBarMode()
         applyFabPosition()
         WidgetRecordHelper.refreshAll(this)
+        startTickerIfNeeded()
     }
 
     override fun onPause() {
+        stopTicker()
         // 「⋮」菜单是个独立窗口，Activity 退到后台时它不会被自动收掉，这里手动关
         dismissOverflowMenu()
         super.onPause()
+    }
+
+    // ---------- 进行中区间的秒级跳动（仅在前台、且确有进行中区间时跑） ----------
+    private val ticker = android.os.Handler(android.os.Looper.getMainLooper())
+    private var ticking = false
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            // 只重绑事件列表，让「进行中 N」的时长刷新；空转时自动停
+            val hasOngoing = repo.getEvents().any { it.isInterval && repo.ongoingInterval(it.id) != null }
+            if (hasOngoing) {
+                adapter.notifyDataSetChanged()
+                ticker.postDelayed(this, 1000)
+            } else {
+                ticking = false
+            }
+        }
+    }
+
+    private fun startTickerIfNeeded() {
+        val hasOngoing = repo.getEvents().any { it.isInterval && repo.ongoingInterval(it.id) != null }
+        if (hasOngoing && !ticking) {
+            ticking = true
+            ticker.post(tickRunnable)
+        } else if (!hasOngoing) {
+            stopTicker()
+        }
+    }
+
+    private fun stopTicker() {
+        ticking = false
+        ticker.removeCallbacks(tickRunnable)
     }
 
     override fun onDestroy() {
@@ -731,13 +765,27 @@ class MainActivity : BaseActivity() {
         dragEnabled = currentSortMode() == SettingsActivity.SORT_MANUAL
         val events = if (dragEnabled) repo.getEventsManualOrder() else repo.getEventsByRecent()
         adapter.submit(events)
-        timelineAdapter.submit(repo.getAllRecords())
+        timelineAdapter.submit((repo.getAllRecords().map { Entry.Point(it) } + repo.getAllIntervals().map { Entry.Interval(it) }).sortedByDescending { it.millis })
         updateVisibility()
     }
 
     private fun quickRecord(event: TimestampEvent) {
-        repo.addRecord(event.id)
-        Toast.makeText(this, getString(R.string.toast_recorded, event.name), Toast.LENGTH_SHORT).show()
+        if (event.isInterval) {
+            // 区间事件：点一下 = 开始；已在进行中 = 结束
+            val ongoing = repo.ongoingInterval(event.id)
+            if (ongoing == null) {
+                val start = repo.startInterval(event.id)
+                Toast.makeText(this, getString(R.string.toast_started, TimeFormat.hm(start)), Toast.LENGTH_SHORT).show()
+            } else {
+                val ended = repo.stopInterval(event.id)
+                val dur = ended?.duration() ?: 0
+                Toast.makeText(this, getString(R.string.toast_stopped, event.name, TimeFormat.duration(dur)), Toast.LENGTH_SHORT).show()
+            }
+            startTickerIfNeeded()
+        } else {
+            repo.addRecord(event.id)
+            Toast.makeText(this, getString(R.string.toast_recorded, event.name), Toast.LENGTH_SHORT).show()
+        }
         refresh()
         WidgetRecordHelper.refreshAll(this)
     }
@@ -748,6 +796,20 @@ class MainActivity : BaseActivity() {
         dlg.recyclerColors.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 6)
         dlg.recyclerColors.adapter = colorAdapter
         if (event != null) dlg.editName.setText(event.name)
+
+        // 记录方式选择：点时刻（默认）/ 时间段。编辑已有事件时回填其类型。
+        val initialType = event?.type ?: TimestampEvent.TYPE_POINT
+        dlg.chipPoint.isChecked = initialType == TimestampEvent.TYPE_POINT
+        dlg.chipInterval.isChecked = initialType == TimestampEvent.TYPE_INTERVAL
+        fun typeHintFor(type: Int) {
+            dlg.tvTypeHint.setText(
+                if (type == TimestampEvent.TYPE_INTERVAL) R.string.event_type_interval_hint
+                else R.string.event_type_point_hint
+            )
+        }
+        typeHintFor(initialType)
+        dlg.chipPoint.setOnCheckedChangeListener { _, checked -> if (checked) typeHintFor(TimestampEvent.TYPE_POINT) }
+        dlg.chipInterval.setOnCheckedChangeListener { _, checked -> if (checked) typeHintFor(TimestampEvent.TYPE_INTERVAL) }
 
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(if (event == null) R.string.dialog_add_event_title else R.string.dialog_edit_event_title)
@@ -762,8 +824,9 @@ class MainActivity : BaseActivity() {
                     dlg.inputName.error = getString(R.string.toast_name_required)
                     return@setOnClickListener
                 }
-                if (event == null) repo.addEvent(name, colorAdapter.selected)
-                else repo.updateEvent(event.id, name, colorAdapter.selected)
+                val type = if (dlg.chipInterval.isChecked) TimestampEvent.TYPE_INTERVAL else TimestampEvent.TYPE_POINT
+                if (event == null) repo.addEvent(name, colorAdapter.selected, type)
+                else repo.updateEvent(event.id, name, colorAdapter.selected, type)
                 dialog.dismiss()
                 refresh()
                 WidgetRecordHelper.refreshAll(this@MainActivity)
@@ -839,19 +902,42 @@ class MainActivity : BaseActivity() {
         inner class VH(private val b: ItemEventBinding) : RecyclerView.ViewHolder(b.root) {
             fun bind(event: TimestampEvent) {
                 b.tvEventName.text = event.name
-                val count = repo.recordCount(event.id)
-                val last = repo.lastRecord(event.id)
-                b.tvEventInfo.text = if (last != null) {
-                    getString(R.string.event_last, TimeFormat.hm(last))
-                } else {
-                    getString(R.string.event_no_record)
-                }
-                b.tvEventCount.text = count.toString()
                 b.viewColorDot.background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(event.color)
                 }
-                b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
+
+                if (event.isInterval) {
+                    // 区间事件：显示进行中状态 / 次数与上次时长
+                    val ongoing = repo.ongoingInterval(event.id)
+                    val intervals = repo.getIntervals(event.id)
+                    b.tvEventCount.text = if (ongoing != null) "■" else getString(R.string.btn_start)
+                    b.ivPlus.visibility = View.GONE
+                    // 进行中：按钮染红（停止感）；空闲：事件色
+                    val runningColor = if (ongoing != null) 0xFFD32F2F.toInt() else event.color
+                    b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(runningColor)
+                    b.tvEventInfo.text = if (ongoing != null) {
+                        getString(R.string.detail_ongoing, TimeFormat.duration(ongoing.duration()))
+                    } else if (intervals.isNotEmpty()) {
+                        val last = intervals.first()
+                        getString(R.string.interval_last, TimeFormat.duration(last.duration()))
+                    } else {
+                        getString(R.string.event_no_record)
+                    }
+                } else {
+                    // 点事件：原有行为
+                    val count = repo.recordCount(event.id)
+                    val last = repo.lastRecord(event.id)
+                    b.tvEventInfo.text = if (last != null) {
+                        getString(R.string.event_last, TimeFormat.hm(last))
+                    } else {
+                        getString(R.string.event_no_record)
+                    }
+                    b.tvEventCount.text = count.toString()
+                    b.ivPlus.visibility = View.VISIBLE
+                    b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
+                }
+
                 b.btnQuickRecord.setOnClickListener { quickRecord(event) }
                 b.root.setOnClickListener { openDetail(event) }
                 b.btnMenu.setOnClickListener { showEventMenu(event) }
@@ -884,9 +970,19 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    /** 时间线统一条目：点记录与区间都按 start 时刻参与月份分组与排序 */
+    private sealed class Entry {
+        data class Point(val rec: TimelineRecord) : Entry()
+        data class Interval(val iv: TimelineInterval) : Entry()
+        val millis: Long get() = when (this) { is Point -> rec.millis; is Interval -> iv.start }
+        val color: Int get() = when (this) { is Point -> rec.eventColor; is Interval -> iv.eventColor }
+        val eventId: Long get() = when (this) { is Point -> rec.eventId; is Interval -> iv.eventId }
+    }
+
     private sealed class TimelineItem {
         data class Month(val key: MonthKey, val count: Int) : TimelineItem()
         data class Record(val rec: TimelineRecord) : TimelineItem()
+        data class Interval(val iv: TimelineInterval) : TimelineItem()
 
         /** 起笔 / 收笔：列表最上、最下那一段「有颜色的空行」，让时间线的两头不至于没颜色 */
         data class Cap(val color: Int, val head: Boolean) : TimelineItem()
@@ -903,23 +999,29 @@ class MainActivity : BaseActivity() {
          */
         private var colors = IntArray(0)
 
-        fun submit(records: List<TimelineRecord>) {
+        fun submit(entries: List<Entry>) {
             items.clear()
-            // 记录已按时间倒序；LinkedHashMap 保持「新月份在前」的插入顺序
-            val monthMap = LinkedHashMap<MonthKey, MutableList<TimelineRecord>>()
-            for (r in records) {
-                val key = MonthKey.of(r.millis)
-                monthMap.getOrPut(key) { mutableListOf() }.add(r)
+            // 已按时间倒序；LinkedHashMap 保持「新月份在前」的插入顺序
+            val monthMap = LinkedHashMap<MonthKey, MutableList<Entry>>()
+            for (e in entries) {
+                val key = MonthKey.of(e.millis)
+                monthMap.getOrPut(key) { mutableListOf() }.add(e)
             }
             for ((key, list) in monthMap) {
                 items.add(TimelineItem.Month(key, list.size))
-                items.addAll(list.map { TimelineItem.Record(it) })
+                list.forEach {
+                    items.add(when (it) {
+                        is Entry.Point -> TimelineItem.Record(it.rec)
+                        is Entry.Interval -> TimelineItem.Interval(it.iv)
+                    })
+                }
             }
             // 从后往前推：月份取紧随其后那条记录的颜色
             var cols = IntArray(items.size)
             for (i in items.indices.reversed()) {
                 cols[i] = when (val it = items[i]) {
                     is TimelineItem.Record -> it.rec.eventColor
+                    is TimelineItem.Interval -> it.iv.eventColor
                     is TimelineItem.Month -> if (i + 1 < items.size) cols[i + 1] else 0
                     is TimelineItem.Cap -> it.color
                 }
@@ -945,6 +1047,7 @@ class MainActivity : BaseActivity() {
         override fun getItemViewType(position: Int): Int = when (items[position]) {
             is TimelineItem.Month -> TYPE_MONTH
             is TimelineItem.Record -> TYPE_RECORD
+            is TimelineItem.Interval -> TYPE_INTERVAL
             is TimelineItem.Cap -> TYPE_CAP
         }
 
@@ -953,6 +1056,7 @@ class MainActivity : BaseActivity() {
             return when (viewType) {
                 TYPE_MONTH -> MonthVH(ItemTimelineMonthBinding.inflate(inflater, parent, false))
                 TYPE_CAP -> CapVH(ItemTimelineCapBinding.inflate(inflater, parent, false))
+                TYPE_INTERVAL -> IntervalVH(ItemTimelineRecordBinding.inflate(inflater, parent, false))
                 else -> RecordVH(ItemTimelineRecordBinding.inflate(inflater, parent, false))
             }
         }
@@ -963,6 +1067,7 @@ class MainActivity : BaseActivity() {
             when (val item = items[position]) {
                 is TimelineItem.Month -> (holder as MonthVH).bind(item, position)
                 is TimelineItem.Record -> (holder as RecordVH).bind(item.rec, position)
+                is TimelineItem.Interval -> (holder as IntervalVH).bind(item.iv, position)
                 is TimelineItem.Cap -> (holder as CapVH).bind(item, position)
             }
         }
@@ -1018,6 +1123,22 @@ class MainActivity : BaseActivity() {
                     setColor(rec.eventColor)
                 }
                 b.root.setOnClickListener { openDetail(repo.getEvent(rec.eventId) ?: return@setOnClickListener) }
+            }
+        }
+
+        inner class IntervalVH(private val b: ItemTimelineRecordBinding) : RecyclerView.ViewHolder(b.root) {
+            fun bind(iv: TimelineInterval, position: Int) {
+                b.tvEventName.text = iv.eventName
+                // 开始 – 结束（时长）；进行中显示已用时
+                val endStr = iv.end?.let { TimeFormat.short(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.durationMillis))
+                b.tvTime.text = "${TimeFormat.short(iv.start)} – $endStr（${TimeFormat.duration(iv.durationMillis)}）"
+                b.tvRelative.text = TimeFormat.relative(this@MainActivity, iv.start)
+                b.vLine.setLine(prevColor(position), iv.eventColor)
+                b.vDot.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(iv.eventColor)
+                }
+                b.root.setOnClickListener { openDetail(repo.getEvent(iv.eventId) ?: return@setOnClickListener) }
             }
         }
     }

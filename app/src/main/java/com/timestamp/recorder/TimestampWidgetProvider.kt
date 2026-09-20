@@ -165,7 +165,15 @@ object WidgetRecordHelper {
     fun handleRecord(context: Context, intent: Intent) {
         val eventId = intent.getLongExtra(TimestampWidgetProvider.EXTRA_EVENT_ID, -1L)
         if (eventId > 0) {
-            EventRepository(context).addRecord(eventId)
+            val repo = EventRepository(context)
+            val event = repo.getEvent(eventId)
+            if (event?.isInterval == true) {
+                // 区间事件：点小组件 = 开始 / 结束切换
+                if (repo.ongoingInterval(eventId) != null) repo.stopInterval(eventId)
+                else repo.startInterval(eventId)
+            } else {
+                repo.addRecord(eventId)
+            }
             refreshAll(context)
         }
     }

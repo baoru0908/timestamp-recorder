@@ -64,7 +64,14 @@ class WidgetSingleProvider : AppWidgetProvider() {
             val repo = EventRepository(context)
             val eventId = WidgetPrefs.singleBind(context, appWidgetId)
             val event = if (eventId > 0) repo.getEvent(eventId) else null
+            val ongoing = event?.takeIf { it.isInterval }?.let { repo.ongoingInterval(it.id) }
             val last = event?.let { repo.lastRecord(it.id) }
+            val infoText: String? = when {
+                ongoing != null -> TimeFormat.duration(ongoing.duration())
+                event?.isInterval == true -> repo.getIntervals(event.id).firstOrNull()?.let { TimeFormat.hm(it.end ?: it.start) }
+                else -> last?.let { TimeFormat.hm(it) }
+            }
+            val bgColor = if (ongoing != null) 0xFFD32F2F.toInt() else (event?.color ?: MISSING_COLOR)
 
             val shape = shapeOf(w, h)
             val views: RemoteViews = when (shape) {
@@ -87,7 +94,7 @@ class WidgetSingleProvider : AppWidgetProvider() {
                         R.id.tvName,
                         event?.name ?: context.getString(R.string.widget_single_missing_short)
                     )
-                    setTextViewText(R.id.tvInfo, if (last != null) TimeFormat.hm(last) else "")
+                    setTextViewText(R.id.tvInfo, infoText ?: "")
                     setFloat(R.id.tvName, "setTextSize", (h / 2.6f).coerceIn(12f, 18f))
                     // 3×1 及以上（≥150dp）空间充裕，保留图标
                     setViewVisibility(R.id.ivIcon, if (w >= 150) View.VISIBLE else View.GONE)
@@ -99,7 +106,7 @@ class WidgetSingleProvider : AppWidgetProvider() {
                         R.id.tvName,
                         event?.name ?: context.getString(R.string.widget_single_missing)
                     )
-                    setTextViewText(R.id.tvInfo, if (last != null) TimeFormat.full(last) else "")
+                    setTextViewText(R.id.tvInfo, infoText ?: "")
                     setFloat(R.id.tvName, "setTextSize", if (shortSide >= 180) 24f else 20f)
 
                     // 高度够才放「累计次数」与「点击记录」提示，2×2 时保持干净
@@ -107,10 +114,8 @@ class WidgetSingleProvider : AppWidgetProvider() {
                     setViewVisibility(R.id.tvCount, if (roomy && event != null) View.VISIBLE else View.GONE)
                     setViewVisibility(R.id.tvHint, if (roomy) View.VISIBLE else View.GONE)
                     if (event != null) {
-                        setTextViewText(
-                            R.id.tvCount,
-                            context.getString(R.string.widget_single_count, repo.recordCount(event.id))
-                        )
+                        val cnt = if (event.isInterval) repo.intervalCount(event.id) else repo.recordCount(event.id)
+                        setTextViewText(R.id.tvCount, context.getString(R.string.widget_single_count, cnt))
                     }
                 }
             }
@@ -128,7 +133,7 @@ class WidgetSingleProvider : AppWidgetProvider() {
                 WidgetPrefs.corner(context)
             }
             views.setImageViewResource(R.id.bgImage, WidgetPrefs.cornerRes(corner))
-            views.setInt(R.id.bgImage, "setColorFilter", event?.color ?: MISSING_COLOR)
+            views.setInt(R.id.bgImage, "setColorFilter", bgColor)
 
             // 整块可点：写入一条记录
             // requestCode 掺入实例 id + data 带上「实例 / 事件」，保证每个实例的 PI 唯一（BUG-3）

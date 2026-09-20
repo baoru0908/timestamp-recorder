@@ -154,6 +154,46 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 时长统计（仅区间事件有数据时显示） -->
+            <LinearLayout
+                android:id="@+id/durationSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/stats_total_duration"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:cardBackgroundColor="@color/glass_card"
+                    app:cardCornerRadius="@dimen/radius_lg"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/glass_stroke"
+                    style="?attr/materialCardViewFilledStyle">
+
+                    <TextView
+                        android:id="@+id/tvDurationSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
             <!-- 各事件记录数 -->
             <TextView
                 android:layout_width="wrap_content"

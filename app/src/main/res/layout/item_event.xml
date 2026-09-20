@@ -90,6 +90,7 @@
             android:contentDescription="@string/quick_record">
 
             <ImageView
+                android:id="@+id/ivPlus"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_record_plus"
