@@ -68,6 +68,19 @@ class MainActivity : BaseActivity() {
         /** 事件卡 ⋮ / 长按选单的动作 id（不走 handleMenuAction，由 showEventMenu 自己消化） */
         private const val MENU_EVENT_EDIT = 11
         private const val MENU_EVENT_DELETE = 12
+
+        /**
+         * 状态恢复标记键：随实例状态保存「上次销毁本页时，是否正在因**配置变更**而重建」。
+         *
+         * ⚠️ 为什么用这个标记、而**不用** `android:saveEnabled=false` 关掉系统自带的列表位置恢复：
+         * 需求对两种「重新进入」是**相反**的 ——
+         * · 真冷启动 / 进程被系统回收后复活 → 用户视作「重新打开 App」→ 应回到**顶部**；
+         * · 旋转 / 切深浅色 / 字体缩放（配置变更）→ 用户视作「同一屏没动」→ 应**保留位置**。
+         * 两者都会走 `onCreate(savedState)`，唯有 [android.app.Activity.isChangingConfigurations]
+         * 能区分（配置变更时 true，进程回收/被划掉时 false）。若改用 `saveEnabled=false` 一刀切，
+         * 系统便不再保存列表位置，**旋转也保不住位置** —— 与需求冲突。
+         */
+        private const val KEY_KEEP_SCROLL = "keep_scroll"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -78,6 +91,16 @@ class MainActivity : BaseActivity() {
     private val timelineAdapter = TimelineAdapter()
     private var dragEnabled = false
     private var currentTab = TAB_EVENTS
+
+    /**
+     * 重建后是否**保留**列表滚动位置（由 [onSaveInstanceState] 写入、[onCreate] 读回）。
+     * - true  → 上次是配置变更重建：不干预，交给系统按原样恢复位置（旋转不跳回顶部）；
+     * - false → 真冷启动或进程复活：首个数据装载完成后把两个列表显式 [RecyclerView.scrollToPosition] 到顶部。
+     */
+    private var keepListScroll = false
+
+    /** 首个数据装载是否已完成：保证「置顶」只在进入本页后的**第一次** [refresh] 执行一次，不影响后续刷新。 */
+    private var firstListLoadDone = false
 
     private val touchHelper by lazy {
         ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
@@ -99,6 +122,10 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 读回状态恢复标记（见 onSaveInstanceState）：
+        // · true  → 正在因配置变更重建（旋转/深浅色/字体缩放）→ 保留列表位置，不干预系统恢复；
+        // · false / 无标记 → 真冷启动或进程被回收后复活 → 稍后在首个数据装载后显式置顶（见 refresh）。
+        keepListScroll = savedInstanceState?.getBoolean(KEY_KEEP_SCROLL, false) ?: false
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setupChrome(binding.toolbar, binding.appBar, binding.root, R.string.main_title, showBack = false)
@@ -561,6 +588,20 @@ class MainActivity : BaseActivity() {
     /** 当前底部栏实测高度（= 内容高 + 导航栏 inset），FAB 据此上移 */
 
 
+    /**
+     * 保存「本页是否正在因**配置变更**被销毁」，用于重建后决定列表要不要回到顶部。
+     *
+     * 官方语义：[isChangingConfigurations] 在配置变更（旋转 / 切深浅色 / 字体缩放）导致的
+     * 销毁-重建时为 true；在进程被系统回收（或因内存被杀、用户划掉任务）时为 false。
+     * 我们把该布尔随实例状态带给「下一个自己」，在 [onCreate] 里读回（[keepListScroll]）：
+     *   true  → 不干预，系统按原样恢复列表位置（旋转保留位置）；
+     *   false → 首个数据装载后显式置顶（冷启动 / 复活回到顶部）。
+     */
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(KEY_KEEP_SCROLL, isChangingConfigurations)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onResume() {
         super.onResume()
         repo.registerChangeListener(prefsListener)
@@ -792,6 +833,17 @@ class MainActivity : BaseActivity() {
         adapter.submit(events)
         timelineAdapter.submit((repo.getAllRecords().map { Entry.Point(it) } + repo.getAllIntervals().map { Entry.Interval(it) }).sortedByDescending { it.millis })
         updateVisibility()
+        // 冷启动 / 进程复活 → 首个数据装载完成后**显式置顶**，确定性保证「进入即顶部」。
+        // 配置变更重建（keepListScroll=true）时**跳过**，让系统按原样恢复位置（旋转保留位置）。
+        // post{}：等本次 notifyDataSetChanged 引发的布局跑完再滚，避免被随后的重排覆盖；
+        // 事件列表与时间线列表都受影响，二者一起处理。
+        if (!firstListLoadDone) {
+            firstListLoadDone = true
+            if (!keepListScroll) {
+                pageEvents.recyclerEvents.post { pageEvents.recyclerEvents.scrollToPosition(0) }
+                pageTimeline.recyclerTimeline.post { pageTimeline.recyclerTimeline.scrollToPosition(0) }
+            }
+        }
     }
 
     private fun quickRecord(event: TimestampEvent) {
