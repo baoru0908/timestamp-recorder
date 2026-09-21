@@ -137,7 +137,16 @@ object EventColors {
      * 白色/极浅色事件，导致卡片上的白点、白色药丸、白色文字全部糊在一起
      * （2026-09-21 真机实测：#FFFFFF 事件在深色卡片上就是一片白）。
      *
-     * 相对亮度对 v 单调递增，所以用二分（10 次足够，误差 <0.1%）。
+     * 相对亮度对 v 单调递增，所以用二分。
+     *
+     * 迭代次数与精度（搜索区间 0.05~1.0，长度 0.95）：
+     * - 12 次 → 0.95/2^12 ≈ 0.00023（约 0.02%）；
+     * - **8 次 → 0.95/2^8 ≈ 0.0037（约 0.4%）**，肉眼看不出差别。
+     *
+     * ⚠️ 安全性：二分只把"通过"的那一侧（lo）往右推，返回值**永远满足
+     * contrast ≥ [WHITE_TEXT_MIN_CONTRAST]**。所以减少迭代只会让结果**更保守**
+     * （上限略低、颜色略深一点点），**不会放过任何不达标的颜色**。
+     * （2026-09-21 由 12 次降到 8 次：取色器拖动时每帧要算上百次，省 1/3 开销。）
      */
     fun maxValueForWhite(hue: Float, sat: Float): Float {
         var lo = 0.05f
@@ -145,7 +154,7 @@ object EventColors {
         if (contrastWithWhite(Color.HSVToColor(floatArrayOf(hue, sat, hi))) >= WHITE_TEXT_MIN_CONTRAST) {
             return hi
         }
-        repeat(12) {
+        repeat(8) {
             val mid = (lo + hi) / 2f
             if (contrastWithWhite(Color.HSVToColor(floatArrayOf(hue, sat, mid))) >= WHITE_TEXT_MIN_CONTRAST) {
                 lo = mid

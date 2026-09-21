@@ -84,6 +84,9 @@ class ColorPickerDialog(
         // 色相条
         val hueBar = HueBar(context).apply { hue = this@ColorPickerDialog.hue }
         hueBar.contentDescription = context.getString(R.string.cd_color_hue_bar)
+        // 拖动期间让 SV 面板用低分辨率重建，松手后再补精修（见 SVView.beginHueDrag）
+        hueBar.onDragStart = { svView.beginHueDrag() }
+        hueBar.onDragEnd = { svView.endHueDrag() }
         hueBar.onChange = { h ->
             hue = h
             val vTop = EventColors.maxValueForWhite(h, sat).coerceAtLeast(0.05f)
@@ -131,21 +134,79 @@ class ColorPickerDialog(
                 // ⚠️ 必须**重建位图**而不只是 invalidate：方形面板的像素颜色是烘进 Bitmap 的，
                 //    只重绘等于把旧色相再画一遍 —— 表现就是"拖色相条，方板颜色不动"
                 //    （主人 2026-09-21 反馈"颜色条与方形颜色板更新不同步"）。
-                rebuild(width, height)
+                //    拖动中改用低分辨率（[dragScale]）重建，松手后再补一次全分辨率。
+                rebuild(if (dragging) dragScale else 1f)
                 invalidate()
             }
         var sat: Float = 1f
         var valx: Float = 1f
         var onChange: (Float, Float) -> Unit = { _, _ -> }
+
+        // ==================== 跟手性：分辨率分级 + 缓存 ====================
+
+        /** 色相条正在被拖 = 用低分辨率位图换跟手性，松手后补精修 */
+        private var dragging = false
+
+        /**
+         * 拖动时位图的缩放比。
+         *
+         * 面板在 xhdpi（density 3）上是 780×780 ≈ **60 万像素**，全量重建要 60 万次
+         * `Color.HSVToColor`；1/4 分辨率 → 195×195 ≈ 3.8 万，工作量降到约 1/16，
+         * 松手后再补全分辨率，拖动期间肉眼看不出差别。
+         */
+        private val dragScale = 0.25f
+
         private var bmp: Bitmap? = null
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val handle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 4f
+        /** 像素缓冲：容量够就复用，拖动期不再每帧 new 一个几十万元素的 IntArray */
+        private var pxBuf: IntArray? = null
+        /** 复用给 `Color.HSVToColor`，避免每个像素都新建一个 FloatArray */
+        private val hsvTmp = FloatArray(3)
+        private val dstRect = RectF()
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+        // ==================== 手柄 ====================
+
+        /** 手柄半径（px）。圆心会被夹在离边缘一个半径以内，保证整圈都落在面板里 */
+        private val handleRadius = 12f
+
+        /**
+         * 双色描边：外圈半透明深色 + 内圈白色，同一圆心同一半径、内圈后画覆盖中间。
+         *
+         * 面板里最亮的颜色是"白字刚好 4.5:1"的中灰 #777（白圈看得见），最暗是纯黑
+         * （深圈看不见、但白圈看得见）—— 两层叠起来保证**任意底色上都至少有一层能看见**。
+         */
+        private val handleOuter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xCC000000.toInt(); style = Paint.Style.STROKE; strokeWidth = 6f
         }
+        private val handleInner = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 3f
+        }
+
+        // ==================== colMax 缓存 ====================
+
+        /** 每列的明度上限，只跟 (hue, 采样列数) 有关；两者都没变就复用，省掉每帧上千次二分 */
+        private var colMax: FloatArray? = null
+        private var colMaxHue = Float.NaN
+
+        /** 松手后的补精修：放进 post 队列执行，且能被新的按下手势取消 */
+        private val refineRunnable = Runnable { rebuild(1f); invalidate() }
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
             super.onSizeChanged(w, h, oldw, oldh)
-            rebuild(w, h)
+            rebuild(1f)
+        }
+
+        /** 色相条按下：切到低分辨率，并取消尚未执行的补精修（快速连续拖动时避免白算一次全量） */
+        fun beginHueDrag() {
+            dragging = true
+            removeCallbacks(refineRunnable)
+        }
+
+        /** 色相条松手 / 取消：排一次全分辨率补精修 */
+        fun endHueDrag() {
+            dragging = false
+            removeCallbacks(refineRunnable)
+            post(refineRunnable)
         }
 
         /**
@@ -155,33 +216,98 @@ class ColorPickerDialog(
          * 为什么这么做：App 统一用白色文字压在事件色上，"挑到白色/极浅色"会直接让
          * 事件卡上的色点、药丸、文字全部糊成一片（2026-09-21 真机踩到 #FFFFFF 事件）。
          * 与其事后补救，不如让面板本身不给出这类颜色。
+         *
+         * @param scale 位图分辨率比例：拖动时传 [dragScale]，其余时候传 1f。
          */
-        private fun rebuild(w: Int, h: Int) {
+        private fun rebuild(scale: Float) {
+            val w = width
+            val h = height
             if (w <= 0 || h <= 0) return
-            bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val px = IntArray(w * h)
-            // 每列只算一次上限（s 只跟 x 有关），260 列 × 12 次二分，开销可忽略
-            val colMax = FloatArray(w) { x ->
-                EventColors.maxValueForWhite(hue, x.toFloat() / (w - 1))
+            val bw = (w * scale).toInt().coerceAtLeast(2)
+            val bh = (h * scale).toInt().coerceAtLeast(2)
+
+            // 位图 / 像素缓冲尺寸没变就复用：拖动期不再反复 create（省掉 GC 压力）
+            val old = bmp
+            if (old == null || old.width != bw || old.height == bh) {
+                bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             }
-            for (x in 0 until w) {
-                val s = x.toFloat() / (w - 1)
-                val vTop = colMax[x]
-                for (y in 0 until h) {
-                    val v = vTop * (1f - y.toFloat() / (h - 1))
-                    px[y * w + x] = Color.HSVToColor(floatArrayOf(hue, s, v))
+            var px = pxBuf
+            if (px == null || px.size < bw * bh) {
+                px = IntArray(bw * bh)
+                pxBuf = px
+            }
+
+            // 采样列数 = 位图列数，所以低分辨率时二分次数也跟着降到 1/4
+            val cm = colMax(bw)
+            hsvTmp[0] = hue
+            for (x in 0 until bw) {
+                val s = x.toFloat() / (bw - 1)
+                val vTop = cm[x]
+                hsvTmp[1] = s
+                for (y in 0 until bh) {
+                    hsvTmp[2] = vTop * (1f - y.toFloat() / (bh - 1))
+                    px[y * bw + x] = Color.HSVToColor(hsvTmp)
                 }
             }
-            bmp!!.setPixels(px, 0, w, 0, 0, w, h)
+            bmp!!.setPixels(px, 0, bw, 0, 0, bw, bh)
+        }
+
+        /** 按 (hue, 采样列数) 缓存的每列明度上限 */
+        private fun colMax(samples: Int): FloatArray {
+            val cached = colMax
+            if (cached != null && cached.size == samples && colMaxHue == hue) return cached
+            val cm = FloatArray(samples) { x ->
+                EventColors.maxValueForWhite(hue, x.toFloat() / (samples - 1))
+            }
+            colMax = cm
+            colMaxHue = hue
+            return cm
+        }
+
+        /** 从缓存的 colMax 线性插值取某列的明度上限（手柄位置用，不再单独跑一次二分） */
+        private fun vTopAt(s: Float): Float {
+            val cm = colMax
+            if (cm == null || cm.size < 2) {
+                return EventColors.maxValueForWhite(hue, s).coerceAtLeast(0.05f)
+            }
+            val pos = s.coerceIn(0f, 1f) * (cm.size - 1)
+            val i = pos.toInt().coerceIn(0, cm.size - 2)
+            return (cm[i] + (cm[i + 1] - cm[i]) * (pos - i)).coerceAtLeast(0.05f)
+        }
+
+        /**
+         * 把手柄圆心夹进面板内，留出一个半径的边距 —— 四个角都不会再露出半截圈。
+         *
+         * **取舍**：角部的手柄会与手指位置差约 [handleRadius] 像素。这是"手柄在面板内
+         * 始终完整可见"优先于"像素级贴合手指"，已确认可接受。
+         * 修复前圆心能落在 (0,0)，白圈只有右下 1/4 在面板内，看上去就是"左上角一团白"
+         * （主人 2026-09-21 反馈）。
+         */
+        private fun clampToPanel(v: Float, extent: Float): Float {
+            val half = extent / 2f
+            val min = handleRadius.coerceAtMost(half)
+            val max = (extent - handleRadius).coerceAtLeast(half)
+            return v.coerceIn(min, max)
         }
 
         override fun onDraw(canvas: Canvas) {
-            bmp?.let { canvas.drawBitmap(it, 0f, 0f, paint) }
-            val cx = sat * width
+            val b = bmp
+            if (b != null) {
+                // 低分辨率位图在这里被放大铺满（[paint] 带 FILTER_BITMAP）；
+                // 松手后会补一张全分辨率的，拖动期间只是略糊，不再掉帧。
+                dstRect.set(0f, 0f, width.toFloat(), height.toFloat())
+                canvas.drawBitmap(b, null, dstRect, paint)
+            }
+            val cx = clampToPanel(sat * width, width.toFloat())
             // 纵向是"0~该列上限"的相对位置，所以手柄要按上限归一化
-            val vTop = EventColors.maxValueForWhite(hue, sat).coerceAtLeast(0.05f)
-            val cy = (1f - valx / vTop) * height
-            canvas.drawCircle(cx, cy.coerceIn(0f, height.toFloat()), 12f, handle)
+            val cy = clampToPanel((1f - valx / vTopAt(sat)) * height, height.toFloat())
+            canvas.drawCircle(cx, cy, handleRadius, handleOuter)
+            canvas.drawCircle(cx, cy, handleRadius, handleInner)
+        }
+
+        override fun performClick(): Boolean {
+            super.performClick()
+            return true
         }
 
         override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
@@ -190,10 +316,15 @@ class ColorPickerDialog(
                 android.view.MotionEvent.ACTION_MOVE -> {
                     sat = (event.x / width).coerceIn(0f, 1f)
                     // 反解纵向：v = 该列上限 × (1 − y/h)，于是**怎么拖都拖不出白字读不清的颜色**
-                    val vTop = EventColors.maxValueForWhite(hue, sat).coerceAtLeast(0.05f)
+                    val vTop = vTopAt(sat)
                     valx = (vTop * (1f - (event.y / height).coerceIn(0f, 1f))).coerceIn(0f, vTop)
                     onChange(sat, valx)
                     invalidate()
+                    return true
+                }
+                android.view.MotionEvent.ACTION_UP,
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    performClick()
                     return true
                 }
             }
@@ -206,8 +337,17 @@ class ColorPickerDialog(
         var hue: Float = 0f
             set(value) { field = value; invalidate() }
         var onChange: (Float) -> Unit = {}
+        /** 按下通知：让 SV 面板切到低分辨率 */
+        var onDragStart: () -> Unit = {}
+        /** 松手 / 取消通知：让 SV 面板补一次全分辨率 */
+        var onDragEnd: () -> Unit = {}
         private var bmp: Bitmap? = null
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        private val dstRect = RectF()
+        // 原先是每次 onDraw 新建一个 Paint（拖动时每帧一个），提到字段里复用
+        private val indicator = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE; strokeWidth = 4f
+        }
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
             super.onSizeChanged(w, h, oldw, oldh)
@@ -221,27 +361,49 @@ class ColorPickerDialog(
         }
 
         override fun onDraw(canvas: Canvas) {
-            bmp?.let { canvas.drawBitmap(it, null, RectF(0f, 0f, width.toFloat(), height.toFloat()), paint) }
+            bmp?.let {
+                dstRect.set(0f, 0f, width.toFloat(), height.toFloat())
+                canvas.drawBitmap(it, null, dstRect, paint)
+            }
             val x = hue / 360f * width
-            canvas.drawLine(x, 0f, x, height.toFloat(),
-                Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; strokeWidth = 4f })
+            canvas.drawLine(x, 0f, x, height.toFloat(), indicator)
+        }
+
+        override fun performClick(): Boolean {
+            super.performClick()
+            return true
         }
 
         override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
             when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN,
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    // 先通知，再改 hue —— 否则这一帧的低分辨率开关还没打开，仍会全量重建
+                    onDragStart()
+                    applyHueFrom(event.x)
+                    return true
+                }
                 android.view.MotionEvent.ACTION_MOVE -> {
-                    // ⚠️ 必须**先写回自己的 hue** 再 invalidate：
-                    //    之前只调 onChange + invalidate，而 hue 字段还是旧值 ——
-                    //    于是白色的竖条指示器纹丝不动（主人 2026-09-21 反馈"颜色条上的
-                    //    竖条指示不随操作实时更新"）。
-                    hue = 360f * (event.x / width).coerceIn(0f, 1f)
-                    onChange(hue)
-                    invalidate()
+                    applyHueFrom(event.x)
+                    return true
+                }
+                android.view.MotionEvent.ACTION_UP,
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    onDragEnd()
+                    performClick()
                     return true
                 }
             }
             return super.onTouchEvent(event)
+        }
+
+        private fun applyHueFrom(x: Float) {
+            // ⚠️ 必须**先写回自己的 hue** 再 invalidate：
+            //    之前只调 onChange + invalidate，而 hue 字段还是旧值 ——
+            //    于是白色的竖条指示器纹丝不动（主人 2026-09-21 反馈"颜色条上的
+            //    竖条指示不随操作实时更新"）。
+            hue = 360f * (x / width).coerceIn(0f, 1f)
+            onChange(hue)
+            invalidate()
         }
     }
 }
