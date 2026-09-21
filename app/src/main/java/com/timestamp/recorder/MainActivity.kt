@@ -995,9 +995,11 @@ class MainActivity : BaseActivity() {
                     b.btnQuickRecord.backgroundTintList = ColorStateList.valueOf(event.color)
                 }
 
-                // 前景色：**默认白字**，只有底色过亮（白/明黄/琥珀这一档）才自动转近黑。
+                // 前景色：**默认白字**，只有底色极亮（纯白/明黄这一档，相对亮度 > 0.60）才转近黑。
                 // 纯白事件色上的白字是 1:1（完全看不见），明黄 1.40:1 —— 必须兜住；
                 // 其余颜色一律保持白字，维持"全 App 一套白字"的一致性。
+                // ⚠️ 2026-09-21 阈值 0.45→0.60（解读 B：白字一致性优先）：
+                //    琥珀 #F9A825 已从近黑改回白字（1.97:1），勿按旧注释理解。
                 val onEvent = EventColors.onColor(event.color)
                 b.tvEventCount.setTextColor(onEvent)
                 b.ivPlus.imageTintList = ColorStateList.valueOf(onEvent)

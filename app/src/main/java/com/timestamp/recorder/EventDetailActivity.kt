@@ -145,7 +145,9 @@ class EventDetailActivity : BaseActivity() {
         if (event == null) { finish(); return }
         binding.toolbar.title = event.name
 
-        // 主按钮前景色：默认白字，底色过亮（白/明黄/琥珀）时自动转近黑 —— 与事件卡同一套规则
+        // 主按钮前景色：默认白字，底色极亮（纯白/明黄，相对亮度 > 0.60）时才转近黑 —— 与事件卡同一套规则
+        // ⚠️ 2026-09-21 阈值 0.45→0.60（解读 B：白字一致性优先）：
+        //    琥珀 #F9A825 已改回白字，不再属于"过亮"这一档
         val onPrimary = EventColors.onColor(event.color)
         binding.btnRecord.setTextColor(onPrimary)
         binding.btnRecord.iconTint = ColorStateList.valueOf(onPrimary)
