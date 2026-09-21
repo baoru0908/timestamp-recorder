@@ -38,7 +38,6 @@ import com.timestamp.recorder.databinding.ItemTimelineMonthBinding
 import com.timestamp.recorder.databinding.ItemTimelineRecordBinding
 import java.util.Calendar
 import java.util.Collections
-import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -1042,7 +1041,6 @@ class MainActivity : BaseActivity() {
 
     /** 月份分组键（按本地时区的年 + 月） */
     private data class MonthKey(val year: Int, val month: Int) {
-        val label: String get() = String.format(Locale.getDefault(), "%d年%d月", year, month)
 
         companion object {
             fun of(millis: Long): MonthKey {
@@ -1178,7 +1176,7 @@ class MainActivity : BaseActivity() {
 
         inner class MonthVH(private val b: ItemTimelineMonthBinding) : RecyclerView.ViewHolder(b.root) {
             fun bind(item: TimelineItem.Month, position: Int) {
-                b.tvMonth.text = item.key.label
+                b.tvMonth.text = getString(R.string.timeline_month_header, item.key.year, item.key.month)
                 b.tvMonthCount.text = getString(R.string.timeline_month_count, item.count)
                 // 竖线：顶部一小段内从上一条的颜色过渡到自己的（月份行也不再是灰色）
                 val own = colors[position]
@@ -1214,7 +1212,7 @@ class MainActivity : BaseActivity() {
                 b.tvEventName.text = iv.eventName
                 // 开始 – 结束（时长）；进行中显示已用时
                 val endStr = iv.end?.let { TimeFormat.short(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.durationMillis))
-                b.tvTime.text = "${TimeFormat.short(iv.start)} – $endStr（${TimeFormat.duration(iv.durationMillis)}）"
+                b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.short(iv.start), endStr, TimeFormat.duration(iv.durationMillis))
                 b.tvRelative.text = TimeFormat.relative(this@MainActivity, iv.start)
                 b.vLine.setLine(prevColor(position), iv.eventColor)
                 b.vDot.background = GradientDrawable().apply {

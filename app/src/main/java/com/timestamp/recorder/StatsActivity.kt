@@ -144,9 +144,9 @@ class StatsActivity : BaseActivity() {
         val longest = intervals.maxOf { it.duration() }
         binding.tvDurationSummary.text = listOf(
             getString(R.string.event_intervals, intervals.size),
-            getString(R.string.stats_total_duration) + "：" + TimeFormat.duration(total),
-            getString(R.string.stats_avg_duration) + "：" + TimeFormat.duration(avg),
-            getString(R.string.stats_longest_duration) + "：" + TimeFormat.duration(longest)
+            getString(R.string.stats_total_duration) + getString(R.string.stats_kpi_sep) + TimeFormat.duration(total),
+            getString(R.string.stats_avg_duration) + getString(R.string.stats_kpi_sep) + TimeFormat.duration(avg),
+            getString(R.string.stats_longest_duration) + getString(R.string.stats_kpi_sep) + TimeFormat.duration(longest)
         ).joinToString("\n")
     }
 

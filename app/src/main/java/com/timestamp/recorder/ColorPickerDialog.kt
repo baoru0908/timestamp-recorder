@@ -82,10 +82,10 @@ class ColorPickerDialog(
         root.addView(title)
 
         // 颜色编码输入框（放在标题下方、预览块上方）
-        // ⚠️ 文案直接写在代码里是为了把改动限制在 2 个文件内；下次做多语言时应迁进 strings.xml
+        // 文案（hint / helperText / contentDescription）已外置到 strings.xml，见 color_picker_hex_*
         hexLayout = TextInputLayout(context).apply {
-            hint = "颜色编码"
-            helperText = "支持 #RRGGBB、#RGB（# 可省略），也接受 #AARRGGBB（忽略前两位）"
+            hint = context.getString(R.string.color_picker_hex_hint)
+            helperText = context.getString(R.string.color_picker_hex_helper)
             boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -100,7 +100,7 @@ class ColorPickerDialog(
             imeOptions = EditorInfo.IME_ACTION_DONE
             isSingleLine = true
             setTextColor(context.getColor(R.color.md_on_surface))
-            contentDescription = "颜色编码输入框，输入十六进制颜色值后回车应用"
+            contentDescription = context.getString(R.string.color_picker_hex_cd)
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit

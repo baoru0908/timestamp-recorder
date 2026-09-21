@@ -35,7 +35,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="我的小组件"
+                android:text="@string/widget_default_title"
                 android:textColor="#FFFFFF"
                 android:textSize="15sp"
                 android:textStyle="bold"
@@ -59,7 +59,7 @@
 
             <TextView
                 android:id="@+id/name0"
-            android:text="事件"
+            android:text="@string/widget_row_placeholder"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"

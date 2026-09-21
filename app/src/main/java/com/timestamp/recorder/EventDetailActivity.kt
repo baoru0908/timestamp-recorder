@@ -230,10 +230,10 @@ class EventDetailActivity : BaseActivity() {
 
     /** 行复制文案 */
     private fun rowCopyText(row: Row): String = when (row) {
-        is Row.Point -> TimeFormat.full(row.millis) + "  （Unix 秒：" + (row.millis / 1000) + "）"
+        is Row.Point -> getString(R.string.unix_copy_text, TimeFormat.full(row.millis), row.millis / 1000)
         is Row.Interval -> {
-            val end = row.iv.end?.let { TimeFormat.full(it) } ?: "进行中"
-            "${TimeFormat.full(row.iv.start)} – $end（${TimeFormat.duration(row.iv.duration())}）"
+            val end = row.iv.end?.let { TimeFormat.full(it) } ?: getString(R.string.interval_ongoing)
+            getString(R.string.interval_range_text, TimeFormat.full(row.iv.start), end, TimeFormat.duration(row.iv.duration()))
         }
     }
 
@@ -259,7 +259,7 @@ class EventDetailActivity : BaseActivity() {
 
     private fun enterSelectionMode() {
         if (currentEvent()?.isInterval == true) {
-            Snackbar.make(binding.root, "时间段事件暂不支持批量管理，长按单段可删除", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.interval_batch_unsupported, Snackbar.LENGTH_SHORT).show()
             return
         }
         if (adapter.items.isEmpty()) {
@@ -542,7 +542,7 @@ class EventDetailActivity : BaseActivity() {
                 writer.write("\uFEFF事件,开始,结束,时长(毫秒),时长\n")
                 list.forEach { iv ->
                     val end = iv.end
-                    val endStr = end?.let { TimeFormat.full(it) } ?: "进行中"
+                    val endStr = end?.let { TimeFormat.full(it) } ?: getString(R.string.interval_ongoing)
                     val dur = iv.duration()
                     writer.write("$name,${TimeFormat.full(iv.start)},$endStr,${dur},${TimeFormat.duration(dur)}\n")
                 }
@@ -592,8 +592,8 @@ class EventDetailActivity : BaseActivity() {
                 is Row.Interval -> {
                     val iv = row.iv
                     val endStr = iv.end?.let { TimeFormat.hm(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.duration()))
-                    holder.b.tvTime.text = "${TimeFormat.hm(iv.start)} – $endStr（${TimeFormat.duration(iv.duration())}）"
-                    holder.b.tvUnix.text = "开始 Unix：${iv.start / 1000}"
+                    holder.b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.hm(iv.start), endStr, TimeFormat.duration(iv.duration()))
+                    holder.b.tvUnix.text = getString(R.string.unix_start_label, iv.start / 1000)
                 }
             }
             holder.b.tvCopy.visibility = if (inSelection) View.GONE else View.VISIBLE

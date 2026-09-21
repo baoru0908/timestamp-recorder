@@ -44,7 +44,7 @@ object WidgetPrefs {
 
     fun customTitle(context: Context, widgetId: Int): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(cTitle(widgetId), "我的小组件") ?: "我的小组件"
+            .getString(cTitle(widgetId), context.getString(R.string.widget_default_title)) ?: context.getString(R.string.widget_default_title)
 
     fun customBg(context: Context, widgetId: Int): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
