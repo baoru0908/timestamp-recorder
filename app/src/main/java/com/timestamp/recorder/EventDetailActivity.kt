@@ -526,7 +526,7 @@ class EventDetailActivity : BaseActivity() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "text/comma-separated-values"
-            putExtra(Intent.EXTRA_TITLE, "时间戳记录_$now.csv")
+            putExtra(Intent.EXTRA_TITLE, getString(R.string.csv_filename_prefix) + "_$now.csv")
         }
         exportLauncher.launch(intent)
     }
@@ -539,7 +539,7 @@ class EventDetailActivity : BaseActivity() {
             val name = event.name.replace(",", "，")
             if (event.isInterval) {
                 val list = repo.getIntervals(eventId)
-                writer.write("\uFEFF事件,开始,结束,时长(毫秒),时长\n")
+                writer.write("\uFEFF" + getString(R.string.csv_header_interval) + "\n")
                 list.forEach { iv ->
                     val end = iv.end
                     val endStr = end?.let { TimeFormat.full(it) } ?: getString(R.string.interval_ongoing)
@@ -548,7 +548,7 @@ class EventDetailActivity : BaseActivity() {
                 }
             } else {
                 val records = repo.getRecords(eventId)
-                writer.write("\uFEFF事件,记录时间,Unix秒\n")
+                writer.write("\uFEFF" + getString(R.string.csv_header_point) + "\n")
                 records.forEach { millis ->
                     writer.write("$name,${TimeFormat.full(millis)},${millis / 1000}\n")
                 }

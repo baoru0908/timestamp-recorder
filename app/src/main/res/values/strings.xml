@@ -73,6 +73,10 @@
     <string name="toast_name_required">请输入事件名称</string>
     <string name="toast_exported">已导出 %1$d 条记录</string>
     <string name="toast_export_failed">导出失败</string>
+    <!-- CSV 导出：文件名前缀 + 两种表头。文字是「对外交付格式」，改动会影响用户既有导出对照习惯，非必要勿改 -->
+    <string name="csv_filename_prefix">时间戳记录</string>
+    <string name="csv_header_interval">事件,开始,结束,时长(毫秒),时长</string>
+    <string name="csv_header_point">事件,记录时间,Unix秒</string>
 
     <string name="export_records">导出记录</string>
     <string name="widget_click_hint">点击记录</string>
