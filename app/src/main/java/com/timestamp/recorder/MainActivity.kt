@@ -804,7 +804,7 @@ class MainActivity : BaseActivity() {
             } else {
                 val ended = repo.stopInterval(event.id)
                 val dur = ended?.duration() ?: 0
-                Toast.makeText(this, getString(R.string.toast_stopped, event.name, TimeFormat.duration(dur)), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_stopped, event.name, TimeFormat.duration(this, dur)), Toast.LENGTH_SHORT).show()
             }
             startTickerIfNeeded()
         } else {
@@ -975,7 +975,7 @@ class MainActivity : BaseActivity() {
                         // 进行中：秒表读秒（MM:SS / H:MM:SS），逐秒真实跳动
                         getString(R.string.detail_ongoing, TimeFormat.durationClock(ongoing.duration()))
                     } else if (intervals.isNotEmpty()) {
-                        getString(R.string.interval_last, TimeFormat.duration(intervals.first().duration()))
+                        getString(R.string.interval_last, TimeFormat.duration(this@MainActivity, intervals.first().duration()))
                     } else {
                         getString(R.string.event_no_record)
                     }
@@ -1211,8 +1211,8 @@ class MainActivity : BaseActivity() {
             fun bind(iv: TimelineInterval, position: Int) {
                 b.tvEventName.text = iv.eventName
                 // 开始 – 结束（时长）；进行中显示已用时
-                val endStr = iv.end?.let { TimeFormat.short(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.durationMillis))
-                b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.short(iv.start), endStr, TimeFormat.duration(iv.durationMillis))
+                val endStr = iv.end?.let { TimeFormat.short(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(this@MainActivity, iv.durationMillis))
+                b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.short(iv.start), endStr, TimeFormat.duration(this@MainActivity, iv.durationMillis))
                 b.tvRelative.text = TimeFormat.relative(this@MainActivity, iv.start)
                 b.vLine.setLine(prevColor(position), iv.eventColor)
                 b.vDot.background = GradientDrawable().apply {

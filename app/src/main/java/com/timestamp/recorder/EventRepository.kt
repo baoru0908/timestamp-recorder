@@ -547,22 +547,23 @@ object TimeFormat {
     fun short(millis: Long): String = short.format(java.util.Date(millis))
 
     /**
-     * 时长格式化：进行中用「约 N」，已结束用精确。
+     * 时长格式化：按「天 / 小时 / 分」组合，不足 1 分钟显示「不到 1 分钟」。
      * 例：1h30m → "1小时30分"；45m → "45分钟"；90s → "1分钟"；2d3h → "2天3小时"
+     * 文案取自 strings.xml（duration_*）；「分」与「分钟」沿用既有中文习惯、不统一。
      */
-    fun duration(millis: Long): String {
-        if (millis < 0) return "0分钟"
+    fun duration(context: Context, millis: Long): String {
+        if (millis < 0) return context.getString(R.string.duration_zero)
         val totalMin = millis / 60_000
         val days = totalMin / 1440
         val hours = (totalMin % 1440) / 60
         val mins = totalMin % 60
         return when {
-            days > 0 && hours > 0 -> "${days}天${hours}小时"
-            days > 0 -> "${days}天"
-            hours > 0 && mins > 0 -> "${hours}小时${mins}分"
-            hours > 0 -> "${hours}小时"
-            mins > 0 -> "${mins}分钟"
-            else -> "不到1分钟"
+            days > 0 && hours > 0 -> context.getString(R.string.duration_days_hours, days, hours)
+            days > 0 -> context.getString(R.string.duration_days, days)
+            hours > 0 && mins > 0 -> context.getString(R.string.duration_hours_mins, hours, mins)
+            hours > 0 -> context.getString(R.string.duration_hours, hours)
+            mins > 0 -> context.getString(R.string.duration_mins, mins)
+            else -> context.getString(R.string.duration_less_minute)
         }
     }
 

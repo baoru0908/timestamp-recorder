@@ -43,6 +43,14 @@
     <string name="stats_total_duration">总时长</string>
     <string name="stats_avg_duration">平均时长</string>
     <string name="stats_longest_duration">最长一次</string>
+    <!-- 时长文案（TimeFormat.duration，经 Context 取资源）；「分」与「分钟」沿用既有中文习惯，不统一 -->
+    <string name="duration_zero">0分钟</string>
+    <string name="duration_days_hours">%1$d天%2$d小时</string>
+    <string name="duration_days">%1$d天</string>
+    <string name="duration_hours_mins">%1$d小时%2$d分</string>
+    <string name="duration_hours">%1$d小时</string>
+    <string name="duration_mins">%1$d分钟</string>
+    <string name="duration_less_minute">不到1分钟</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
     <!-- 强调"就用这个"的场景（取色器等即时生效的确认），与「保存」区分 -->

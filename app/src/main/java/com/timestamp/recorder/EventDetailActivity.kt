@@ -162,9 +162,9 @@ class EventDetailActivity : BaseActivity() {
             )
             adapter.submit(intervals.map { Row.Interval(it) })
             binding.tvStats.text = if (ongoing != null) {
-                getString(R.string.detail_ongoing, TimeFormat.duration(ongoing.duration()))
+                getString(R.string.detail_ongoing, TimeFormat.duration(this, ongoing.duration()))
             } else if (intervals.isNotEmpty()) {
-                getString(R.string.interval_last, TimeFormat.duration(intervals.first().duration()))
+                getString(R.string.interval_last, TimeFormat.duration(this, intervals.first().duration()))
             } else {
                 getString(R.string.event_intervals, 0)
             }
@@ -198,7 +198,7 @@ class EventDetailActivity : BaseActivity() {
                 val ended = repo.stopInterval(eventId)
                 stopTicker()
                 Snackbar.make(binding.root,
-                    getString(R.string.toast_stopped, event.name, TimeFormat.duration(ended?.duration() ?: 0)),
+                    getString(R.string.toast_stopped, event.name, TimeFormat.duration(this, ended?.duration() ?: 0)),
                     Snackbar.LENGTH_SHORT).show()
             }
         } else {
@@ -233,7 +233,7 @@ class EventDetailActivity : BaseActivity() {
         is Row.Point -> getString(R.string.unix_copy_text, TimeFormat.full(row.millis), row.millis / 1000)
         is Row.Interval -> {
             val end = row.iv.end?.let { TimeFormat.full(it) } ?: getString(R.string.interval_ongoing)
-            getString(R.string.interval_range_text, TimeFormat.full(row.iv.start), end, TimeFormat.duration(row.iv.duration()))
+            getString(R.string.interval_range_text, TimeFormat.full(row.iv.start), end, TimeFormat.duration(this, row.iv.duration()))
         }
     }
 
@@ -544,7 +544,7 @@ class EventDetailActivity : BaseActivity() {
                     val end = iv.end
                     val endStr = end?.let { TimeFormat.full(it) } ?: getString(R.string.interval_ongoing)
                     val dur = iv.duration()
-                    writer.write("$name,${TimeFormat.full(iv.start)},$endStr,${dur},${TimeFormat.duration(dur)}\n")
+                    writer.write("$name,${TimeFormat.full(iv.start)},$endStr,${dur},${TimeFormat.duration(this, dur)}\n")
                 }
             } else {
                 val records = repo.getRecords(eventId)
@@ -591,8 +591,8 @@ class EventDetailActivity : BaseActivity() {
                 }
                 is Row.Interval -> {
                     val iv = row.iv
-                    val endStr = iv.end?.let { TimeFormat.hm(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.duration()))
-                    holder.b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.hm(iv.start), endStr, TimeFormat.duration(iv.duration()))
+                    val endStr = iv.end?.let { TimeFormat.hm(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(this@EventDetailActivity, iv.duration()))
+                    holder.b.tvTime.text = getString(R.string.interval_range_text, TimeFormat.hm(iv.start), endStr, TimeFormat.duration(this@EventDetailActivity, iv.duration()))
                     holder.b.tvUnix.text = getString(R.string.unix_start_label, iv.start / 1000)
                 }
             }
