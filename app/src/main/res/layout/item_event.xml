@@ -139,8 +139,9 @@
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
                 android:textStyle="bold" />
-            <!-- 前景色：统一白色（主人 2026-09-21 决定，与详情页主按钮、小组件保持同一套方案）。
-                 代码里也会显式写一次白，避免将来主题变动导致这里被改色。 -->
+            <!-- 前景色：默认白色；仅底色极亮（相对亮度 > 0.60，如纯白 / 明黄）时转近黑，
+                 与详情页主按钮、小组件同一套 EventColors.onColor 方案（v4.6.0 起阈值 0.60）。
+                 这里的 android:textColor 只是默认声明，真实颜色由代码按事件色覆写。 -->
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -40,10 +40,10 @@ data class TimeInterval(
 }
 
 /**
- * 分类染色色板（Material 风格 24 色）
+ * 分类染色色板（Material 风格 23 色）
  *
  * 🔒 **色板数值永久冻结（2026-09-21 主人明确要求）**：
- * 这 24 个 ARGB 值会被**持久化到用户数据里**（SharedPreferences 的事件 color 字段、
+ * 这 23 个 ARGB 值会被**持久化到用户数据里**（SharedPreferences 的事件 color 字段、
  * 以及 format 2 备份 JSON 的 events[].color），是已发布版本的行为契约。
  * 任何"重新配色 / 压深 / 换色相"的改动都会**静默改变老用户所有事件的观感**，
  * 并且会让「恢复旧备份」后的显示与当初不一致 —— 所以**不要改这里的任何数值**，

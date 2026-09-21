@@ -153,7 +153,7 @@ class TimestampWidgetProvider : AppWidgetProvider() {
     }
 }
 
-/** 小组件点击记录公共处理：记录 + 刷新两种类型全部实例 */
+/** 小组件点击记录公共处理：记录 + 刷新三种类型全部实例 */
 object WidgetRecordHelper {
     /**
      * 记录点击的 PendingIntent 唯一标识。

@@ -27,9 +27,6 @@
             android:paddingEnd="@dimen/space_5"
             android:paddingTop="@dimen/space_4">
 
-            <!-- ========== 1. 快捷按钮位置 ========== -->
-            
-
             <!-- ========== 2. 事件排序 ========== -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

@@ -13,7 +13,7 @@ import android.graphics.RectF
 import android.widget.RemoteViews
 
 /**
- * 小组件类型四：自定义。
+ * 小组件类型三：自定义。
  * 由配置页指定：标题、背景色、要显示哪些事件。行渲染与「全部事件」一致（圆点 + 名 + 最近时间）。
  * 背景用现画的圆角矩形 Bitmap，避免共用 shape 的 tint 跨实例串色。
  */

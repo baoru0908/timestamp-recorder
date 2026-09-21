@@ -6,7 +6,7 @@
     <string name="main_subtitle">管理事件 · 一键记录 · 桌面快捷</string>
     <string name="fab_add">添加事件</string>
     <string name="quick_record">记录一次</string>
-    <string name="empty_events">还没有事件\n点击右下角 + 添加第一个事件</string>
+    <string name="empty_events">还没有事件\n点底部中间的圆形「＋」添加第一个事件</string>
 
     <string name="event_count">共 %1$d 条记录</string>
     <string name="event_count_label">%1$s · 共 %2$d 条</string>
@@ -69,14 +69,11 @@
     <string name="toast_export_failed">导出失败</string>
 
     <string name="export_records">导出记录</string>
-    <string name="widget_label">时间戳记录</string>
-    <string name="widget_empty">暂无事件\n打开 App 添加</string>
     <string name="widget_click_hint">点击记录</string>
-    <string name="widget_description">点击事件按钮快速记录时间戳</string>
     <string name="unix_label">Unix 秒：%1$d</string>
     <string name="action_copy">复制</string>
 
-    <!-- 小组件（两种类型） -->
+    <!-- 小组件（三种类型） -->
     <string name="widget_all_description">全部事件列表：显示所有事件按钮，点击即记录</string>
     <string name="widget_single_description">单事件按钮：绑定一个事件，点击即记录；支持 1×1 至 4×4 任意尺寸</string>
     <string name="widget_all_label">时间戳 · 全部事件</string>
@@ -107,8 +104,6 @@
     <string name="menu_settings">设置</string>
     <string name="menu_more">更多</string>
     <string name="settings_title">设置</string>
-    <string name="fab_position_label">快捷按钮位置</string>
-    <string name="fab_position_hint">「+」快捷按钮可在底部左、中、右三档切换</string>
     <string name="fab_pos_start">左侧</string>
     <string name="fab_pos_center">居中</string>
     <string name="fab_pos_end">右侧</string>
@@ -183,7 +178,7 @@
     <string name="about_desc">一款完全离线、零权限的时间戳记录工具：在 App 内或桌面小组件单击，即可为任意事件快速记下一笔当前时间。支持备注与标签（规划中）。</string>
     <string name="about_open_source">开源与字体</string>
     <string name="about_font_note">界面字体采用小米 MiSans（© 小米，全球免费商用），在此注明出处。为控制安装包体积，仅嵌入常用字子集，字体本身未作任何修改。</string>
-    <string name="about_license_note">本应用代码均为原创、不依赖任何第三方库；图标为自绘矢量图。欢迎在 GitHub 查看源码、提交反馈或参与改进。</string>
+    <string name="about_license_note">界面自绘、无广告、数据仅存本机；代码为原创实现，仅采用 AndroidX / Material 等标准库与 MIT 许可的液态玻璃组件；图标为自绘矢量图。欢迎在 GitHub 查看源码、提交反馈或参与改进。</string>
     <string name="about_open_github">在 GitHub 查看源码</string>
     <string name="about_feedback">问题反馈 / 建议</string>
     <string name="about_footer">时间戳记录 · 完全离线 · 无广告</string>

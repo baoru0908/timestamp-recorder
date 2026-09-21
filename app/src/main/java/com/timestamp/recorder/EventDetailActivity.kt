@@ -230,7 +230,7 @@ class EventDetailActivity : BaseActivity() {
 
     /** 行复制文案 */
     private fun rowCopyText(row: Row): String = when (row) {
-        is Row.Point -> TimeFormat.full(row.millis) + "  (Unix 秒: " + (row.millis / 1000) + ")"
+        is Row.Point -> TimeFormat.full(row.millis) + "  （Unix 秒：" + (row.millis / 1000) + "）"
         is Row.Interval -> {
             val end = row.iv.end?.let { TimeFormat.full(it) } ?: "进行中"
             "${TimeFormat.full(row.iv.start)} – $end（${TimeFormat.duration(row.iv.duration())}）"
@@ -259,7 +259,7 @@ class EventDetailActivity : BaseActivity() {
 
     private fun enterSelectionMode() {
         if (currentEvent()?.isInterval == true) {
-            Snackbar.make(binding.root, "区间事件暂不支持批量管理，长按单段可删除", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, "时间段事件暂不支持批量管理，长按单段可删除", Snackbar.LENGTH_SHORT).show()
             return
         }
         if (adapter.items.isEmpty()) {
@@ -593,7 +593,7 @@ class EventDetailActivity : BaseActivity() {
                     val iv = row.iv
                     val endStr = iv.end?.let { TimeFormat.hm(it) } ?: getString(R.string.timeline_ongoing, TimeFormat.duration(iv.duration()))
                     holder.b.tvTime.text = "${TimeFormat.hm(iv.start)} – $endStr（${TimeFormat.duration(iv.duration())}）"
-                    holder.b.tvUnix.text = "开始 Unix: ${iv.start / 1000}"
+                    holder.b.tvUnix.text = "开始 Unix：${iv.start / 1000}"
                 }
             }
             holder.b.tvCopy.visibility = if (inSelection) View.GONE else View.VISIBLE

@@ -30,7 +30,7 @@
             app:iconPadding="10dp" />
         <!-- ⚠️ android:textColor 只是声明"主题给了色"（MaterialButton 据此不再自行覆盖文字色），
              真实颜色由 EventDetailActivity 按事件色亮度覆写：浅色事件用近黑前景 + 1dp 内描边，
-             保证 19sp 大字在 24 色任意一色上都有 ≥4.6:1（评审 I-1）。 -->
+             保证 19sp 大字在 23 色任意一色上都有 ≥4.6:1（评审 I-1）。 -->
 
         <TextView
             android:id="@+id/tvStats"

@@ -687,7 +687,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    /** 快捷按钮位置：左 / 中 / 右（设置页可切换）；底边距跟随底部栏实测高度，始终悬在栏上方 */
+    /** 加号圆钮固定对齐底部栏正中心；底边距跟随底部栏实测高度，始终悬在栏上方 */
     private fun applyFabPosition() {
         // 加号玻璃圆钮对齐「岛的正中心」：fabGlass 在 root 层（标准 FrameLayout，
         // gravity 才生效——LiquidGlassView 自定义 onLayout 会忽略子 View gravity），

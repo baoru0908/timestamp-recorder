@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 类型四：自定义小组件（自选事件 + 标题 + 背景色）。创建时进入配置页。 -->
+<!-- 类型三：自定义小组件（自选事件 + 标题 + 背景色）。创建时进入配置页。 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="110dp"

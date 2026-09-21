@@ -15,7 +15,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.timestamp.recorder.databinding.ActivitySettingsBinding
 import java.nio.charset.StandardCharsets
 
-/** 设置页：快捷按钮（+）位置左/中/右切换、小组件圆角、一键添加、关于 */
+/** 设置页：事件排序、桌面小组件圆角、一键添加与权限引导、数据备份、关于与内置教程 */
 class SettingsActivity : BaseActivity() {
 
     companion object {
@@ -144,7 +144,7 @@ class SettingsActivity : BaseActivity() {
             startActivity(Intent(this, AboutActivity::class.java))
         }
 
-        // 使用教程：交给系统浏览器打开 README 的教程章节
+        // 使用教程：打开 App 内置的离线教程页（TutorialActivity，不联网、不依赖 GitHub）
         binding.btnTutorial.setOnClickListener { startActivity(Intent(this, TutorialActivity::class.java)) }
 
         // 数据备份 / 恢复（走系统 SAF，不申请存储权限）
