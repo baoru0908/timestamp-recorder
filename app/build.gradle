@@ -14,8 +14,8 @@ android {
         // 版本规范：语义化版本 主版本.次版本.修订号
         //   主版本 = 架构级 / 破坏性变更；次版本 = 新增功能；修订号 = 修 bug 与 UI 微调
         // versionCode 每次发布 +1，只增不减（Android 用它判断新旧，与 versionName 无关）
-        versionCode 40
-        versionName "4.7.0"
+        versionCode 41
+        versionName "4.7.1"
     }
 
     buildTypes {
