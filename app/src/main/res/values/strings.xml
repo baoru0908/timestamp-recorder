@@ -175,7 +175,7 @@
     <!-- 关于 / 开源引导 -->
     <string name="about_title">关于</string>
     <string name="about_about">关于本项目</string>
-    <string name="about_desc">一款完全离线、零权限的时间戳记录工具：在 App 内或桌面小组件单击，即可为任意事件快速记下一笔当前时间。支持备注与标签（规划中）。</string>
+    <string name="about_desc">一款完全离线、零权限的时间戳记录工具：在 App 内或桌面小组件单击，即可为任意事件快速记下一笔当前时间。</string>
     <string name="about_open_source">开源与字体</string>
     <string name="about_font_note">界面字体采用小米 MiSans（© 小米，全球免费商用），在此注明出处。为控制安装包体积，仅嵌入常用字子集，字体本身未作任何修改。</string>
     <string name="about_license_note">界面自绘、无广告、数据仅存本机；代码为原创实现，仅采用 AndroidX / Material 等标准库与 MIT 许可的液态玻璃组件；图标为自绘矢量图。欢迎在 GitHub 查看源码、提交反馈或参与改进。</string>
@@ -207,7 +207,7 @@
     <!-- 统计页 -->
     <string name="stats_title">统计</string>
     <string name="stats_total_events">事件数</string>
-    <string name="stats_total_records">记录总数</string>
+    <string name="stats_total_records">瞬间记录数</string>
     <string name="stats_busiest_event">记录最多的事件</string>
     <string name="stats_no_data">还没有任何记录\n去主页点几下「记录」吧</string>
     <string name="stats_per_event">各事件记录数</string>
